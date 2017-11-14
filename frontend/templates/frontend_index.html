@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="jumbotron">
+	<h1>{{event.name}}</h1>
+	<p>{{event.eventStart}} - {{event.eventEnd}}</p>
+	<hr>
+	<h3>Your Account Details</h3>
+	<h4>Registration <span class="pull-right"><a href="#" class="btn btn-sm btn-primary">Register for {{event.name}}</a></span></h4>
+	<p>Registration Details go Here</p>
+	<hr>
+	<h4>Panels <span class="pull-right"><a href="#" class="btn btn-sm btn-primary">Submit a Panel for {{event.name}}</a></span></h4>
+	<p>Panel Details go Here</p>
+	<hr>
+	<h4>Dealers Den <span class="pull-right"><a href="#" class="btn btn-sm btn-primary">Register for {{event.name}} Dealers Den</a></span></h4>
+	<p>Dealers Den Details go Here</p>
+	<hr>
+	
+</div>
+{% endblock %}

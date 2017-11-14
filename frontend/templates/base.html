@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+	<head>
+	        <meta name="viewport" content="width=device-width, initial-scale=1">
+        	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<script src="{% static 'b4b/js/jquery-1.10.2.min.js' %}"></script>
+                <link href="{% static "b4b/css/bootstrap.min.css" %}" rel="stylesheet" crossorigin="anonymous">
+                <link href="{% static "fa/css/font-awesome.css" %}" rel="stylesheet" crossorigin="anonymous">
+                <!-- <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" crossorigin="anonymous"></script> -->
+                <!-- <script src="{% static "b4/js/popper.js" %}" crossorigin="anonymous"></script> -->
+                <script src="{% static "b4b/js/popper.js" %}" crossorigin="anonymous"></script>
+                <script src="{% static "b4b/js/bootstrap.min.js" %}" crossorigin="anonymous"></script>
+                <script src="{% static "b4b/js/sticky.js" %}" crossorigin="anonymous"></script>
+		
+	{% block head %}
+
+	{% endblock %}
+	</head>
+	<body>
+
+		{% block nav %}
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+			<div class="container">
+			<a class="navbar-brand" href="#">{{event.name}}</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarNavDropdown">
+				<ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+				{% if request.user.is_authenticated %}
+				<li class="nav-item">
+					<a class="nav-link" href="#">My Registration</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="#">Programming</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="#">Marketplace</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="#">Communications</a>
+				</li>
+				{% endif %}
+				</ul>
+			<ul class="navbar-nav my-2 my-lg-0">
+				<li class="nav-item">
+					<a class="nav-link" href="#">{{request.user.username}}</a>
+				</li>
+			</ul>
+			</div>
+			</div>
+		</nav>
+		{% endblock %}
+		{% block subnav %}
+		{% endblock %}
+		<div class="container">
+		{% block body %}
+		{% endblock %}
+		</div>
+		</span>
+		{% block visual %}
+		{% endblock %}
+		{% block scripting %}
+		{% endblock %}
+		<footer class="footer container">
+        	   <p>Made with &hearts;</p>
+	        </footer>
+	</body>
+</html>

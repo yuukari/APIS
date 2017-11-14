@@ -28,7 +28,7 @@ DEBUG = True
 ADMINS = [('Carissa Brittain', 'carissa.brittain@gmail.com'),]
 SERVER_EMAIL = "it_errors@furthemore.org"
 
-ALLOWED_HOSTS = ['dawningbrooke.net',]
+ALLOWED_HOSTS = ['dawningbrooke.net','monoga.io','monoga.io:5000']
 
 
 # Application definition
