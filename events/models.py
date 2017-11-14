@@ -129,6 +129,9 @@ class Panel(models.Model):
 	def __str__(self):
 		return self.title
 
+	def getSlots(self):
+		return PanelSlot.objects.filter(panel=self).order_by('time_start')
+
 class PanelRequestType(models.Model):
 	event = models.ForeignKey('registration.Event')
 	EVENT_TYPES = (

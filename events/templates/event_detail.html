@@ -30,6 +30,19 @@
 								</div>
 								<div class="col-md-8">
 									{{ panel.title }}{% if panel.r18 %} <span class="badge badge-danger">18+</span>{% endif %}
+									<br>
+									{% if panel.accepted %}
+									<span class="badge badge-success">Panel Accepted</span>
+									{% elif panel.accepted == False and panel.confirmed == True %}
+									<span class="badge badge-danger">Panel Rejected</span>
+									{% else %}
+									<span class="badge badge-warning">Pending Review</span>
+									{% endif %}
+									{% if panel.confirmed %}
+									<span class="badge badge-info">Confirmed</span>
+									{% else %}
+									<span class="badge badge-dark">Not Confirmed</span>
+									{% endif %}
 								</div>
 							</div>
 							<br>
@@ -54,6 +67,10 @@
 									<b>Panelist</b>
 								</div>
 								<div class="col-md-8">
+									{% if panel.panelist.badge == None %}
+									{{ panel.panelist }}<br>
+										<span class="badge badge-dark">No Badge Assigned</span>
+									{% else %}
 									{{ panel.panelist.badge.badgeName }}<br>
 									{% if panel.panelist.badge.abandoned == "Abandoned" %}
 									<span class="badge badge-danger">Not Paid</span>
@@ -72,6 +89,7 @@
 									{% else %}
 										<span class="badge badge-dark">Not Checked In</span>
 									{% endif %}
+									{% endif %}
 
 								</div>
 							</div>
@@ -80,7 +98,11 @@
 									<b>Track</b>
 								</div>
 								<div class="col-md-8">
+									{% if panel.track == None %}
+									<em>No Track Assignment</em>
+									{% else %}
 									<a href="#">{% track_display panel.track %}</a>
+									{% endif %}
 								</div>
 							</div>
 							<br>
@@ -200,7 +222,7 @@ $(document).ready(function(){
 	$(document).on("click", ".schedule-conflicts", function(event){
 		$("#verModal").modal("toggle");
 		$('#verification').text("");
-		$.get('/backend/events/controls/v1/{{event.pk}}/panel/'+$(event.target).data("pk")+'/verification/', function(data){
+		$.get('/backend/events/controls/v1/panel/'+$(event.target).data("pk")+'/verification/', function(data){
 			//$("#verification").text(JSON.stringify(data));
 			$("#verification").append("<div id='main-row' class='row'></div>");
 			var rows = "col-md-6";

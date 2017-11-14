@@ -163,14 +163,14 @@
 			}
 				$("#current-time").text((d.getMonth()+1)+"/"+d.getDate()+" "+(d.getHours()-1)+":"+d.getMinutes());
 			// load up event days
-			$.get('/backend/events/controls/v1/{{event.pk}}/', function(data3){
+			$.get('/backend/events/controls/v1/', function(data3){
 				$.each(data3[{{event.pk}}].names, function(i){
 					$("#event-day").append("<option value='"+data3[{{event.pk}}].names_full[i][1]+"'>"+data3[{{event.pk}}].names[i][0]+"</option>");
 				});
 			});
 
 			$("#loading_status").text("Fetching Event API...");
-			$.get('/backend/events/controls/v1/pull/events/{{event.pk}}'+timeCode, function(data){
+			$.get('/backend/events/controls/v1/pull/events'+timeCode, function(data){
 				$.each(data, function(room,lst){ 
 					var disp0 = [];
 					var disp1 = [];

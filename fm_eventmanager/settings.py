@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'registration',
     'volunteer.apps.VolunteerConfig',
     'events.apps.EventsConfig',
+    'frontend.apps.FrontendConfig',
     'import_export',
     'django_extensions',
 ]

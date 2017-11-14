@@ -14,7 +14,7 @@
 			<div class="collapse navbar-collapse" id="navbarNavDropdown">
 				<ul class="navbar-nav mr-auto mt-2 mt-lg-0">
 				<li class="nav-item">
-					<a class="nav-link" href="#">Convention</a>
+					<a class="nav-link" href="{% url "frontend:backend-dash" %}">Convention</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" href="#">Registration</a>
@@ -23,7 +23,7 @@
 					<a class="nav-link disabled" href="#">Operations</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="{% url "events:manager" event.pk %}">Programming</a>
+					<a class="nav-link" href="{% url "events:manager" %}">Programming</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link disabled" href="#">Marketplace</a>

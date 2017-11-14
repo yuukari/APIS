@@ -5,19 +5,16 @@
 		<div style="background: #DDDDDD; margin-bottom: 1em;">
 		<ul class="nav nav-pills nav-fill container">
 			<li class="nav-item">
-				<a class="nav-link disabled" href="#">Programming</a>
+				<a class="nav-link" href="#">Dashboard</a>
 			</li>
 			<li class="nav-item">
-				<a class="nav-link" href="{% url "events:manager" %}">Panels</a>
+				<a class="nav-link" href="#">Event Details</a>
 			</li>
 			<li class="nav-item">
-				<a class="nav-link" href="{% url "events:checkin" %}">Check-In</a>
+				<a class="nav-link" href="#">Staff &amp; HR</a>
 			</li>
-			<li class="nav-item dropdown">
-				<a class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" href="#">Tracks</a>
-				<div class="dropdown-menu">
-					{% track_list event "dropdown-item" %}
-				</div>
+			<li class="nav-item">
+				<a class="nav-link" href="#">Logs</a>
 			</li>
 			<li class="nav-item dropdown">
 				<a class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" href="#">Schedule</a>

@@ -6,4 +6,5 @@ urlpatterns = [
     url(r'^backend/events/', include('events.urls')),
     url(r'^backend/volunteer/', include('volunteer.urls')),
     url(r'^admin/', admin.site.urls),
+    url(r'^', include('frontend.urls')),
 ]

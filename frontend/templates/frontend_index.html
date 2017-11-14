@@ -3,6 +3,7 @@
 <div class="jumbotron">
 	<h1>{{event.name}}</h1>
 	<p>{{event.eventStart}} - {{event.eventEnd}}</p>
+	{% if request.user.is_authenticated %}
 	<hr>
 	<h3>Your Account Details</h3>
 	<h4>Registration <span class="pull-right"><a href="#" class="btn btn-sm btn-primary">Register for {{event.name}}</a></span></h4>
@@ -14,6 +15,8 @@
 	<h4>Dealers Den <span class="pull-right"><a href="#" class="btn btn-sm btn-primary">Register for {{event.name}} Dealers Den</a></span></h4>
 	<p>Dealers Den Details go Here</p>
 	<hr>
-	
+	{% else %}
+	<a href="{% url "registration:index" %}" class="btn btn-primary btn-block">Begin Registration</a>
+	{% endif %}
 </div>
 {% endblock %}

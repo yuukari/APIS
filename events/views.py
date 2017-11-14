@@ -13,22 +13,20 @@ from .forms import PanelForm
 import datetime
 
 events = Event.objects.all()
+event = Event.objects.get(name__icontains="2018")
 
 # Create your views here.
 
 #@login_required(login_url='/login/')
-def visual(request, event_id):
-	event = get_object_or_404(Event, pk=event_id)
+def visual(request):
 	return render(request, 'visual.html', {"events": events, "event": event})
 
 #@login_required(login_url='/login/')
-def glance(request,event_id):
-	event = get_object_or_404(Event,pk=event_id)
+def glance(request):
 	return render(request, 'glance.html', {"events": events, "event": event})
 
 #@login_required(login_url='/login/')
-def ControlsV1GetPanels(request, event_id):
-	event = get_object_or_404(Event, pk=event_id)
+def ControlsV1GetPanels(request):
 	panels = PanelSlot.objects.filter(event=event)
 	output = {}
 	for x in panels:
@@ -55,8 +53,7 @@ def ControlsV1GetPanels(request, event_id):
 	return JsonResponse(output)
 
 #@login_required(login_url='/login/')
-def ControlsV1GetRooms(request, event_id):
-	event = get_object_or_404(Event, pk=event_id)
+def ControlsV1GetRooms(request):
 	rooms = Room.objects.filter(event=event).order_by('pk')
 	output = {}
 	for x in rooms:
@@ -67,8 +64,7 @@ def ControlsV1GetRooms(request, event_id):
 	return JsonResponse(output)
 
 #@login_required(login_url='/login/')
-def ControlsV1GetEventDetail(request, event_id):
-	event = get_object_or_404(Event, pk=event_id)
+def ControlsV1GetEventDetail(request):
 	output = {}
 
 	days = (event.eventEnd - event.eventStart).days
@@ -310,14 +306,12 @@ def ControlsV1ReverseBlocks(request):
 }
 	return JsonResponse(blocks)
 
-def testform(request,event_id):
-	event = get_object_or_404(Event,pk=event_id)
+def testform(request):
 	form = PanelForm(initial={'event': event},event=event)
 	return render(request, 'testform.html', {'events': events, 'event': event, 'form': form})
 
-def manager(request,event_id,track_id=None):
-	event = get_object_or_404(Event,pk=event_id)
-	panels = PanelSlot.objects.filter(panel__type=0,event=event).order_by('time_start')
+def manager(request,track_id=None):
+	panels = Panel.objects.filter(event=event)
 	filter = ""
 	if track_id != None:
 		track = get_object_or_404(Track, pk=track_id)
@@ -332,8 +326,7 @@ def manager(request,event_id,track_id=None):
 	return render(request, 'manager.html', context)
 
 
-def checkIn(request,event_id):
-	event = get_object_or_404(Event,pk=event_id)
+def checkIn(request):
 	panelists = Panelist.objects.filter(event=event).order_by('-fan_name')
 	pnx = {}
 	for x in panelists:
@@ -346,8 +339,7 @@ def checkIn(request,event_id):
 		}
 	return render(request, 'checkin.html', context)
 
-def panelDetail(request,event_id,panel_id):
-	event = get_object_or_404(Event,pk=event_id)
+def panelDetail(request,panel_id):
 	panel = get_object_or_404(Panel,pk=panel_id)
 	slots = PanelSlot.objects.filter(panel=panel)
 	requests = PanelRequest.objects.filter(panel=panel)
@@ -362,8 +354,7 @@ def panelDetail(request,event_id,panel_id):
 	}	
 	return render(request, 'event_detail.html', context)
 
-def ControlsV1CheckInPanelist(request,event_id,panelist_id):
-	event = get_object_or_404(Event,pk=event_id)
+def ControlsV1CheckInPanelist(request,panelist_id):
 	panelist = get_object_or_404(Panelist,pk=panelist_id)
 	panelist.checked_in = True
 	panelist.checked_in_date = timezone.now()
@@ -371,8 +362,7 @@ def ControlsV1CheckInPanelist(request,event_id,panelist_id):
 	return JsonResponse({"status": "OK"})
 
 #@login_required(login_url='/login/')
-def ControlsV1PullPanelVerification(request,event_id,panel_id):
-	event = get_object_or_404(Event,pk=event_id)
+def ControlsV1PullPanelVerification(request,panel_id):
 	panel = get_object_or_404(PanelSlot,pk=panel_id)
 	m_panel_time_end = timezone.localtime(panel.time_start+timezone.timedelta(minutes=panel.duration))
 	m_panel_start_setup =  timezone.localtime(panel.time_start-timezone.timedelta(minutes=panel.setup_time))
@@ -535,8 +525,7 @@ def ControlsV1PullPanelVerification(request,event_id,panel_id):
 #				}
 	return JsonResponse(output)
 #@login_required(login_url='/login/')
-def ControlsV1PullEvents(request,event):
-	event = get_object_or_404(Event,pk=event)
+def ControlsV1PullEvents(request):
 	#now = timezone.localtime(timezone.make_aware(datetime.datetime.strptime('08/24/2017 17:56', '%m/%d/%Y %H:%M')))
 	now = timezone.localtime(timezone.now())
 	output = {}
@@ -583,8 +572,7 @@ def ControlsV1PullEvents(request,event):
 		output[y.name] = g2
 	return JsonResponse(output)
 
-def ControlsV1PullEventsTimecode(request,event,timecode):
-	event = get_object_or_404(Event,pk=event)
+def ControlsV1PullEventsTimecode(request,timecode):
 	now = timezone.localtime(timezone.make_aware(datetime.datetime.strptime(timecode, '%m%d%Y%H%M')))
 	#now = timezone.localtime(timezone.now())
 	output = {}

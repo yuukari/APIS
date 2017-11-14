@@ -25,7 +25,7 @@
 				{% for z in y.panels %}
 					<tr>
 					<td>
-					<a href="{% url "events:panel-detail" event.pk z.pk %}" class="btn btn-link btn-sm panel-detail-modal" data-pk="{{z.pk}}">{{z.panel.title}}</a></td>
+					<a href="{% url "events:panel-detail" z.pk %}" class="btn btn-link btn-sm panel-detail-modal" data-pk="{{z.pk}}">{{z.panel.title}}</a></td>
 					<td>
 						<small>{% if z.time_start|timeuntil == "0 minutes" %}{{ z.time_start|timesince }} ago{% else %}Starts in {{z.time_start|timeuntil}}{% endif %}</small>
 					</td>

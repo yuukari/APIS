@@ -205,13 +205,13 @@
 			reverseblocks = {};
 
 			$("#loading_status").text("Fetching Panels Data..");
-			$.get('/backend/events/controls/v1/{{ event.pk }}/panels/', function(data){
+			$.get('/backend/events/controls/v1/panels/', function(data){
 				panels = data;
 				$("#loading_status").text("Fetching Venue Data..");
-				$.get('/backend/events/controls/v1/{{ event.pk }}/rooms/', function(data2){
+				$.get('/backend/events/controls/v1/rooms/', function(data2){
 					rooms = data2;
 					$("#loading_status").text("Fetching Event Data..");
-					$.get('/backend/events/controls/v1/{{event.pk}}/', function(data3){
+					$.get('/backend/events/controls/v1/', function(data3){
 						event = data3;
 
 						$("#loading_status").text("Preparing Schedule Generator...");

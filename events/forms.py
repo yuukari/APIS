@@ -10,3 +10,8 @@ class PanelForm(forms.ModelForm):
 	class Meta:
 		model = Panel
 		fields = '__all__'
+
+#class PanelistSignup(forms.ModelForm):
+	
+
+#class PanelUserSubmit(forms.ModelForm):
