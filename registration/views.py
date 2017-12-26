@@ -1,3 +1,4 @@
+from django.contrib.admin.views.decorators import staff_member_required
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseServerError, JsonResponse
@@ -227,9 +228,9 @@ def checkoutStaff(request):
           oitem.order = order
           oitem.save()
 
-      sendStaffRegistrationEmail(order.id, email)
       discount.used = discount.used + 1
       discount.save()
+      sendStaffRegistrationEmail(order.id, email)
       request.session.flush()
       return JsonResponse({'success': True})
 
@@ -256,13 +257,15 @@ def checkoutStaff(request):
     status, response = chargePayment(order.id, pbill, get_client_ip(request))
 
     if status:
-        sendStaffRegistrationEmail(order.id, email)
         for oitem in orderItems:
             oitem.order = order
             oitem.save()
+        order.status = 'Paid'
+        order.save()
         request.session.flush()
         discount.used = discount.used + 1
         discount.save()
+        sendStaffRegistrationEmail(order.id, email)
         return JsonResponse({'success': True})
     else:
         order.delete()
@@ -324,7 +327,7 @@ def getDealerTotal(orderItems, discount, dealer):
       partnerBreakfast = 60*partnerCount
     wifi = 0
     if dealer.needWifi:
-        wifi = 45
+        wifi = 50
     paidTotal = dealer.paidTotal()
     total = subTotal + 45*partnerCount + partnerBreakfast + dealer.tableSize.basePrice + wifi - dealer.discount - paidTotal
     if total < 0: 
@@ -435,8 +438,11 @@ def checkoutAsstDealer(request):
         reference = getConfirmationToken()
 
     partners = partnerCount - originalPartnerCount
+    total = Decimal(45*partners)
+    if pbill['breakfast']:
+        total = total + Decimal(60*partners)
 
-    order = Order(total=Decimal(40*partners), reference=reference, discount=None,
+    order = Order(total=total, reference=reference, discount=None,
                   orgDonation=0, charityDonation=0, billingName=pbill['cc_firstname'] + " " + pbill['cc_lastname'],
                   billingAddress1=pbill['address1'], billingAddress2=pbill['address2'],
                   billingCity=pbill['city'], billingState=pbill['state'], billingCountry=pbill['country'],
@@ -449,10 +455,15 @@ def checkoutAsstDealer(request):
     status, response = chargePayment(order.id, pbill, get_client_ip(request))
 
     if status:
-        sendDealerAsstEmail(dealer.id)
         orderItem.order = order
         orderItem.save()
+        order.status = "Paid"
+        order.save()
         request.session.flush()
+        try:
+            sendDealerAsstEmail(dealer.id)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': "Your payment succeeded but we may have been unable to send you a confirmation email. If you do not receive one within the next hour, please contact marketplace@furthemore.org to get your confirmation number."})
         return JsonResponse({'success': True})
     else:
         order.delete()
@@ -607,6 +618,8 @@ def checkoutDealer(request):
         sendDealerPaymentEmail(dealer, order)
         orderItem.order = order
         orderItem.save()
+        order.status = "Paid"
+        order.save()
         request.session.flush()
         return JsonResponse({'success': True})
     else:
@@ -913,7 +926,7 @@ def addToCart(request):
                         city=pda['city'], state=pda['state'], country=pda['country'], postalCode=pda['postal'],
                         phone=pda['phone'], email=pda['email'], birthdate=birthdate,
                         emailsOk=bool(pda['emailsOk']), volunteerContact=len(pda['volDepts']) > 0, volunteerDepts=pda['volDepts'],
-                        surveyOk=bool(pda['surveyOk']))
+                        surveyOk=bool(pda['surveyOk']), aslRequest=bool(pda['asl']))
     attendee.save()
 
     badge = Badge(badgeName=pda['badgeName'], event=event, attendee=attendee)
@@ -1025,7 +1038,7 @@ def checkout(request):
                   orgDonation=porg, charityDonation=pcharity, billingName=pbill['cc_firstname'] + " " + pbill['cc_lastname'],
                   billingAddress1=pbill['address1'], billingAddress2=pbill['address2'],
                   billingCity=pbill['city'], billingState=pbill['state'], billingCountry=pbill['country'],
-                  billingPostal=11111, billingEmail=pbill['email'])
+                  billingPostal=pbill['postal'], billingEmail=pbill['email'])
     order.save()
 
     status, response = chargePayment(order.id, pbill, get_client_ip(request))
@@ -1050,6 +1063,62 @@ def checkout(request):
 def cartDone(request):
     context = {}
     return render(request, 'registration/done.html', context)
+
+###################################
+# Staff only access
+
+@staff_member_required
+def basicBadges(request):
+    badges = Badge.objects.all()
+    staff = Staff.objects.all()
+
+    bdata = [{'badgeName': badge.badgeName, 'level': badge.effectiveLevel().name, 'assoc':badge.abandoned(), 
+              'firstName': badge.attendee.firstName.lower(), 'lastName': badge.attendee.lastName.lower(),
+              'printed': badge.printed, 'discount': badge.getDiscount(),
+              'assoc': badge.abandoned(), 'orderItems': getOptionsDict(badge.orderitem_set.all()) } 
+             for badge in badges if badge.effectiveLevel() != None and badge.event.name == "Furthemore 2018"]
+
+    #data = [{'firstName': att.firstName.lower(), 'lastName': att.lastName.lower(), 'badgeName': att.badgeName, 
+    #         'badgeNumber': att.badgeNumber, 'level': att.effectiveLevel().name, 'printed': att.printed,
+    #         'assoc': att.abandoned(), 'orderItems':getOptionsDict(att.orderitem_set.all()), 
+    #         'discount': att.getDiscount()} for att in attendees if att.effectiveLevel() != None]
+
+    staffdata = [{'firstName': s.attendee.firstName.lower(), 'lastName':s.attendee.lastName.lower(),
+                  'title': s.title, 'id': s.id} 
+                for s in staff if s.event.name == "Furthemore 2018"]
+
+    for staff in staffdata: 
+        sbadge = Staff.objects.get(id=staff['id']).getBadge()
+        if sbadge: 
+            staff['badgeName'] = sbadge.badgeName
+            staff['level'] = sbadge.effectiveLevel().name
+            staff['assoc'] = sbadge.abandoned()
+            staff['orderItems'] = getOptionsDict(sbadge.orderitem_set.all())
+
+    sdata = sorted(bdata, key=lambda x:(x['level'],x['lastName']))
+    ssdata = sorted(staffdata, key=lambda x:x['lastName'])
+
+    dealers = [att for att in sdata if att['assoc'] == 'Dealer']
+    staff = [att for att in ssdata]
+    attendees = [att for att in sdata if att['assoc'] != 'Staff' ]
+    return render(request, 'registration/utility/badgelist.html', {'attendees': attendees, 'dealers': dealers, 'staff': staff})    
+
+@staff_member_required
+def holidayBadges(request):
+    badges = Badge.objects.all()
+
+    bdata = [{'badgeName': badge.badgeName, 'level': badge.effectiveLevel().name, 'assoc':badge.abandoned(), 
+              'firstName': badge.attendee.firstName.lower(), 'lastName': badge.attendee.lastName.lower(), 
+              'address': badge.attendee.address1 + " " + badge.attendee.address2,
+              'city': badge.attendee.city, 'state': badge.attendee.state, 'postal': badge.attendee.postalCode,
+              'country': badge.attendee.country, 'event': badge.event.name } 
+             for badge in badges if badge.effectiveLevel() != None]
+ 
+    sdata = sorted(bdata, key=lambda x:(x['event'],x['level'],x['lastName']))
+    attendees = [att for att in sdata if att['assoc'] != 'Staff' and att['level'] in ('God-mode','God-Mode','Player','Raven God', 'Elite Sponsor') ]
+    return render(request, 'registration/utility/holidaylist.html', {'attendees': attendees})    
+
+
 
 ###################################
 # Printing
@@ -1097,30 +1166,6 @@ def getOptionsDict(orderItems):
               orderDict[ao.option.optionName.replace(" ", "").replace("-", "")] = ao.optionValue
 
     return orderDict
-
-def badgeList(request):
-    attendees = Attendee.objects.all()
-    staff = Staff.objects.all()
-
-    data = [{'firstName': att.firstName.lower(), 'lastName': att.lastName.lower(), 'badgeName': att.badgeName, 
-             'badgeNumber': att.badgeNumber, 'level': att.effectiveLevel().name, 'printed': att.printed,
-             'assoc': att.abandoned(), 'orderItems':getOptionsDict(att.orderitem_set.all()), 
-             'discount': att.getDiscount()} for att in attendees if att.effectiveLevel() != None]
-    staffdata = [{'firstName': s.attendee.firstName.lower(), 'lastName':s.attendee.lastName.lower(),
-                  'badgeName': s.attendee.badgeName, 'badgeNumber': s.attendee.badgeNumber, 
-                  'level': s.attendee.effectiveLevel().name, 'assoc': s.attendee.abandoned(), 
-                  'orderItems':getOptionsDict(s.attendee.orderitem_set.all()), 
-                  'discount': s.attendee.getDiscount(), 
-                  'title': s.title} for s in staff if s.attendee.effectiveLevel() != None]
-
-    sdata = sorted(data, key=lambda x:(x['level'],x['lastName']))
-    ssdata = sorted(staffdata, key=lambda x:x['lastName'])
-
-    dealers = [att for att in sdata if att['assoc'] == 'Dealer']
-    staff = [att for att in ssdata]
-    attendees = [att for att in sdata if att['assoc'] != 'Staff' ]
-    return render(request, 'registration/utility/badgelist.html', {'attendees': attendees, 'dealers': dealers, 'staff': staff})    
-
 
 def getEvents(request):
     events = Event.objects.all()

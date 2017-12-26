@@ -6,6 +6,7 @@ app_name = 'registration'
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
+
     url(r'^upgrade/lookup/?$', views.findUpgrade, name='findUpgrade'),
     url(r'^upgrade/info/?$', views.infoUpgrade, name='infoUpgrade'),
     url(r'^upgrade/add/?$', views.addUpgrade, name='addUpgrade'),
@@ -63,7 +64,8 @@ urlpatterns = [
     url(r'^tables/?$', views.getTableSizes, name='tablesizes'),
     url(r'^addresses/?$', views.getSessionAddresses, name='addresses'),
 
-#    url(r'^utility/badges?$', views.badgeList, name='badgeList'),
+    url(r'^utility/badges?$', views.basicBadges, name='basicBadges'),
+    url(r'^utility/holiday?$', views.holidayBadges, name='holidayBadges'),
 
     url(r'^flush/?$', views.flush, name='flush'),
 
