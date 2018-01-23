@@ -77,7 +77,7 @@ def infoStaff(request):
         if badges.count() > 0:
             badge = badges[0]
             if badge.effectiveLevel():
-                lvl_dict = model_to_dict(badge.effectiveLevel())
+                lvl_dict["basePrice"] = badge.effectiveLevel().basePrice
        
         context = {'staff': staff, 'jsonStaff': json.dumps(staff_dict, default=handler), 
                    'jsonAttendee': json.dumps(attendee_dict, default=handler),
@@ -917,6 +917,10 @@ def addToCart(request):
     pdp = postData['priceLevel']
     evt = postData['event']
 
+    banCheck = checkBanList(pda['firstName'], pda['lastName'], pda['email'])
+    if banCheck:
+        return JsonResponse({'success': False, 'message': "We are sorry, but you are unable to register for Furthemore 2018. If you have any questions, or would like further information or assistance, please contact Registration at registration@furthemore.org."})
+        
     tz = timezone.get_current_timezone()
     birthdate = tz.localize(datetime.strptime(pda['birthdate'], '%m/%d/%Y' ))
 
