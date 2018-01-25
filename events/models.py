@@ -17,7 +17,6 @@ class Panelist(models.Model):
 	first_name = models.CharField(max_length=50,blank=True)
 	last_name = models.CharField(max_length=50,blank=True)
 	fan_name = models.CharField(max_length=50)
-	badge = models.ForeignKey('registration.Badge',blank=True,null=True)
 	email = models.EmailField(blank=True)
 	checked_in = models.BooleanField(default=False)
 	checked_in_date = models.DateTimeField(blank=True,null=True)
@@ -100,8 +99,6 @@ class Panel(models.Model):
 		)
 	event = models.ForeignKey('registration.Event')
 	panelist = models.ForeignKey(Panelist,blank=True,null=True)
-	# to be removed for PanelSlot
-	room = models.ForeignKey(Room)
 
 	track = models.ForeignKey(Track,blank=True,null=True)
 
@@ -113,18 +110,6 @@ class Panel(models.Model):
 
 	accepted = models.BooleanField(default=False)
 	confirmed = models.BooleanField(default=False)
-
-	# to be removed for PanelSlot
-	time_start = models.DateTimeField()
-
-	# to be removed for PanelSlot
-	duration = models.IntegerField(choices=DURATION,default=60)
-
-	# to be removed for Track
-	type = models.IntegerField(choices=EVENT_TYPES,default=0)
-
-	# to be removed for PanelSlot
-	setup_time = models.IntegerField(choices=SETUP_TIME,default=30)
 
 	def __str__(self):
 		return self.title
@@ -282,5 +267,45 @@ class PanelSlot(models.Model):
 	setup_time = models.IntegerField(choices=SETUP_TIMES,default=0)
 	room = models.ForeignKey(Room)
 	def __str__(self):
-		return self.panel.title
-	
+		if self.panel == None:
+			return "Empty Slot"
+		else:
+			return self.panel.title
+	def get_panelist(self):
+		if self.panel == None or self.panel.panelist == None:
+			return "Empty Slot"
+		else:
+			return self.panel.panelist
+	def get_panelist_pk(self):
+		if self.panel == None or self.panel.panelist == None:
+			return None
+		else:
+			return self.panel.panelist.pk
+	def get_r18(self):
+		if self.panel == None:
+			return False
+		else:
+			return self.panel.r18
+	def get_title(self):
+		if self.panel == None:
+			return "Empty Slot"
+		else:
+			return self.panel.title
+	def get_track(self):
+		if self.panel == None:
+			return "Empty Slot"
+		else:
+			return self.panel.track
+	def get_track_name(self):
+		if self.panel == None:
+			return "Empty Slot"
+		else:
+			return self.panel.track.title
+	def get_track_color(self):
+		if self.panel == None:
+			return "#000000"
+		else:
+			return self.panel.track.color
+	def get_click_action(self):
+		return "/backend/events/manage/slot/"+str(self.pk)+"/"
+

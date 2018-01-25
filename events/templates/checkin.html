@@ -12,7 +12,7 @@
 		<tbody>
 			{% for x,y in list.items %}
 			<tr>
-				<td>{{y.panelist.badge.badgeName}}</td>
+				<td>{{y.panelist}}</td>
 				<td>
 					{% if y.panelist.checked_in %}
 					Checked In {{y.panelist.checked_in_date|date:"D G:i"}}

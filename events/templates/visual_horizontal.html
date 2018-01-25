@@ -1,4 +1,5 @@
 {% extends "event_base.html" %}
+{% load static %}
 {% block head %}
 <style>
 #loading {
@@ -27,47 +28,69 @@
 .event-top {
 	border-top: 1px solid #000 !important;
 	border-left: 1px solid #000 !important;
-	border-right: 1px solid #000 !important;
-	border-bottom: none;
+	border-bottom: 1px solid #000 !important;
+	border-right: none;
 }
 .event-middle {
-	border-top: 0px solid #000 !important;
-	border-left: 1px solid #000 !important;
-	border-right: 1px solid #000 !important;
-	border-bottom: 0px solid #000 !important;
+	border-left: 0px solid #000 !important;
+	border-top: 1px solid #000 !important;
+	border-bottom: 1px solid #000 !important;
+	border-right: 0px solid #000 !important;
 	
 }
 .empty-slot-middle {
-	border-left: 1px solid #000 !important;
-	border-right: 1px solid #000 !important;
+	border-top: 1px solid #000 !important;
+	border-bottom: 1px solid #000 !important;
 	background-color: transparent;
 	
 }
 .event-bottom {
 	border-bottom: 1px solid #000 !important;
-	border-left: 1px solid #000 !important;
+	border-top: 1px solid #000 !important;
 	border-right: 1px solid #000 !important;
-	border-top: 0px solid #000 !important;
+	border-left: 0px solid #000 !important;
 }
 .empty-slot-bottom {
 	border-bottom: 1px solid #000 !important;
-	border-left: 1px solid #000 !important;
+	border-top: 1px solid #000 !important;
 	border-right: 1px solid #000 !important;
 }
-
-
+.abs-col {
+	position: absolute;
+	border-right: 1px inset #000 !important;
+	border-left: 0px !important;
+	border-top: 0px !important;
+	border-bottom: 1px solid black !important;
+	height: 77px !important;
+	text-align: center;
+}
+.header-col {
+	text-align: center;
+}
+#visual table {
+	display: table;
+	table-layout: fixed;
+}
+#visual table tbody td, #visual table thead th {
+	height: 5em;
+	width: 150px;
+}
+.shift-table{
+	overflow-x: scroll;
+	/* width: 90% !important; */
+}
 </style>
 {% endblock %}
 {% block visual %}
-<div id="loading"><br><br><br><h1>Events Visualizer <small>v0.1</small></h1>Give us a second...<br><small><span id="loading_status"></span></small></div>
+<div id="loading"><br><br><br><h1>Events Visualizer <small>v1.0</small></h1>Give us a second...<br><small><span id="loading_status"></span></small></div>
 
-	<div id="visual" class="row">
+	<div id="visual">
 
 	</div>
-
 	<div id="dev"></div>
 {% endblock %}
 {% block scripting %}
+<script type="text/javascript" src="{% static "moment/moment.js" %}"></script>
 <script type="text/javascript">
 	$(document).ready(function() {
 
@@ -82,29 +105,50 @@
 			$("#loading_status").text("Building Rows..");
 			// setup rows from events
 			$.each(event[{{event.pk}}].names, function(day){
-				$("#visual").append("<div class='col-lg-12 col-md-12 col-sm-12 col-xs-12 row-division' id='row-"+event[{{event.pk}}].names[day][1]+"'><h1>"+event[{{event.pk}}].names[day][0]+"</h1></div>");
-				$("#row-"+event[{{event.pk}}].names[day][1]).append("<table class='table'  id='table-"+event[{{event.pk}}].names[day][1]+"' class='action-table'><thead class='thead-dark'><tr><th><h6>"+event[{{event.pk}}].names[day][0]+"</h6></th></tr></thead><tbody></tbody></table>");
+				$("#visual").append("<div class=' row-division shift-table' id='row-"+event[{{event.pk}}].names[day][1]+"'></div>");
+				$("#row-"+event[{{event.pk}}].names[day][1]).append("<table class='table'  id='table-"+event[{{event.pk}}].names[day][1]+"' class='action-table'><thead class='thead-dark'><tr><th class='abs-col'><h6>"+moment(event[{{event.pk}}].names_full[day][1],"MMDDYYYY").format("MM/DD")+"</h6></th><th>&nbsp;</th></tr></thead><tbody></tbody></table>");
 				$.each(rooms, function(pk,room){
-					$("#row-"+event[{{event.pk}}].names[day][1]+" thead tr").append("<th id='header-"+event[{{event.pk}}].names[day][1]+"-"+pk+"' class='header-tile white-space' data-pk='"+pk+"'>"+room.name+"</th>");
+					$("#row-"+event[{{event.pk}}].names[day][1]+" tbody").append("<tr id='tablerow-"+event[{{event.pk}}].names[day][1]+"-"+pk+"' class='header-tile white-space' data-pk='"+pk+"'><td class='bg-dark text-light abs-col'>"+room.name+"</td><td>&nbsp;</td></tr>");
 				});
+			});
+			$.each(event[{{event.pk}}].names, function(day){
 				var i = 3;
 				var n = 0;
 				$.each(blocks, function(n,cxi){
 					var dnv = day;
+					var dnxi = day;
 					if(parseInt(n)>=69){
-							dnv = day + 1;
+							//alert("Modded");
+							dnv = day - 1;
+							dnxi = day + 1;
 					}
+					if(event[{{event.pk}}].reverse_day_blocks[dnxi+2] !== undefined){
 					try{
-						$("#row-"+event[{{event.pk}}].names[day][1]+" tbody").append("<tr id='tablerow-"+cxi+"-"+event[{{event.pk}}].names[dnv][1]+"'><td>"+cxi+"</td></tr>");
+						$("#row-"+event[{{event.pk}}].names[day][1]+" thead tr").append("<th class='header-col' id='header-"+cxi+"-"+event[{{event.pk}}].names[dnv][1]+"'>"+
+
+moment((event[{{event.pk}}].names_full[dnxi][1]+cxi),"MMDDYYYYHHmm").format("ddd")
+
++"<br>"+moment((event[{{event.pk}}].names_full[dnxi][1]+cxi),"MMDDYYYYHHmm").format("hh:mm a")
+
+
+
++"</th>");
 					}catch(err){
-						$("#row-"+event[{{event.pk}}].names[day][1]+" tbody").append("<tr id='tablerow-"+cxi+"-"+event[{{event.pk}}].reverse_day_blocks[dnv+1]+"'><td>"+cxi+"</td></tr>");						
+
+							$("#row-"+event[{{event.pk}}].names[day][1]+" thead tr").append("<th class='header-col' id='header-"+cxi+"-"+event[{{event.pk}}].reverse_day_blocks[dnv]+"'>"+
+
+moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm").format("ddd")
+
++"<br>"+moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm").format("hh:mm a")+"</th>");						
+					}
 					}
 						$.each(rooms, function(dm,ix){
 							var evi = event[{{event.pk}}].names[day][1];
 							try{
-								$("#tablerow-"+cxi+"-"+event[{{event.pk}}].names[dnv][1]).append("<td data-click='/backend/events/manage/slot/new/?timecode="+event[{{event.pk}}].names[dnv][1]+cxi+"&roomid="+dm+"' id='"+event[{{event.pk}}].names[dnv][1]+cxi+"-"+dm+"'></td>");
+								$("#tablerow-"+event[{{event.pk}}].names[dnv][1]+"-"+dm).append("<td data-click='/backend/events/manage/slot/new/?date="+event[{{event.pk}}].names[day][1]+"&time="+cxi+"&roomid="+dm+"' id='"+event[{{event.pk}}].names[day][1]+cxi+"-"+dm+"'></td>");
 							}catch(err){
-								$("#tablerow-"+cxi+"-"+event[{{event.pk}}].reverse_day_blocks[dnv+1]).append("<td id='"+event[{{event.pk}}].reverse_day_blocks[dnv+1]+cxi+"-"+dm+"'></td>");
+								//$("#tablerow-"+event[{{event.pk}}].reverse_day_blocks[dnv+1]+"-"+dm).append("<td id='"+event[{{event.pk}}].reverse_day_blocks[dnv+1]+cxi+"-"+dm+"'></td>");
+								$("#tablerow-"+event[{{event.pk}}].reverse_day_blocks[dnv]+"-"+dm).append("<td id='"+event[{{event.pk}}].reverse_day_blocks[day]+cxi+"-"+dm+"'></td>");
 							}
 						});
 				});
@@ -118,7 +162,7 @@
 				}
 				$("#"+panel.time_slot+"-"+panel.room).attr("data-click",panel.click);
 				console.log(panel);
-				$("#"+panel.time_slot+"-"+panel.room).text(panel.title);
+				$("#"+panel.time_slot+"-"+panel.room).html(panel.title+"<br>"+panel.duration_small);
 				//$("#"+panel.time_slot+"-"+panel.room).addClass('white-space');
 				if(panel.title === "Empty Slot"){
 					$("#"+panel.time_slot+"-"+panel.room).css('background-color','transparent');
@@ -134,20 +178,14 @@
 					}
 					block = blocks[String(blk+n)];
 					if((blk+n) == 1){
-						$("#"+pds+block+"-"+panel.room).html(panel.title);
+						$("#"+pds+block+"-"+panel.room).html(panel.title+"<br>"+panel.duration_small);
 					}
-					if((blk+n) == 2){
-						$("#"+pds+block+"-"+panel.room).html("<small>"+panel.panelist+"</small>");
-					}
-					if((blk+n) == 3){
-						$("#"+pds+block+"-"+panel.room).html("<small>"+panel.duration+"</small>");
-					}
-					if(n == 1){
-						$("#"+pds+block+"-"+panel.room).html("<small>"+panel.panelist+"</small>");
-					}
-					if(n == 2){
-						$("#"+pds+block+"-"+panel.room).html("<small>"+panel.duration+"</small>");
-					}
+					//if((blk+n) == 2){
+					//	$("#"+pds+block+"-"+panel.room).html("<small>"+panel.duration_small+"</small>");
+					//}
+					//if(n == 1){
+					//	$("#"+pds+block+"-"+panel.room).html("<small>"+panel.duration_small+"</small>");
+					//}
 					$("#"+pds+block+"-"+panel.room).attr("data-click",panel.click);
 						//$("#"+panel.date_slot+block+"-"+panel.room).append("<small>(("+panel.pk+"))</small>");
 						//$("#"+panel.date_slot+block+"-"+panel.room).append("<small>(("+(blk+n)+"))</small>");
@@ -183,7 +221,7 @@
 					$("#"+panel.date_slot+block+"-"+panel.room).addClass('event-middle');
 					if(n == 1){
 						$("#"+panel.date_slot+block+"-"+panel.room).addClass('event-bottom');
-						$("#"+panel.date_slot+block+"-"+panel.room).append("<small>Setup: "+panel.setup+"</small>");
+						$("#"+panel.date_slot+block+"-"+panel.room).append("Setup: "+panel.setup_small);
 					}
 					if(n == panel.setup_blocks){
 						$("#"+panel.date_slot+block+"-"+panel.room).removeClass('event-middle');
@@ -195,7 +233,7 @@
 
 			});
 			//$('table').stickyTableHeaders({fixedOffset: $(".navbar")});
-			$('table').stickyTableHeaders();
+			//$('table').stickyTableHeaders();
 			$("#loading_status").text("Let's disco.");
 			$("#loading").fadeOut();
 			
@@ -217,6 +255,7 @@
 					$("#loading_status").text("Fetching Event Data..");
 					$.get('/backend/events/controls/v1/', function(data3){
 						event = data3;
+						console.log(event);
 
 						$("#loading_status").text("Preparing Schedule Generator...");
 						$.get('/backend/events/controls/v1/helpers/blocks/', function(data4){

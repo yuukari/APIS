@@ -1,0 +1,22 @@
+{% extends "event_base.html" %}
+{% block head %}
+{% endblock %}
+{% block body %}
+<h1>New Slot</h1>
+<form>
+<select required>
+		<option disabled selected value>--------</option>
+	{% for x in durations %}
+		<option value="{{x.0}}">{{x.1}}</option>
+	{% endfor %}
+</select>
+<button type="submit">
+</form>
+{% endblock %}
+{% block scripting %}
+<script type="text/javascript">
+	$(document).ready(function() {
+
+	});
+</script>
+{% endblock %}

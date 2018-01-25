@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.shortcuts import render,get_object_or_404
+from django.shortcuts import render,get_object_or_404,redirect
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 #from django.views.generic.edit import FormView
 from registration.models import Event
 from .models import Panel,Panelist,Room,PanelRequest,PanelComment,PanelSlot,Track
@@ -21,6 +22,9 @@ event = Event.objects.get(name__icontains="2018")
 def visual(request):
 	return render(request, 'visual.html', {"events": events, "event": event})
 
+def visualHorizontal(request):
+	return render(request, 'visual_horizontal.html', {"events": events, "event": event})
+
 #@login_required(login_url='/login/')
 def glance(request):
 	return render(request, 'glance.html', {"events": events, "event": event})
@@ -31,10 +35,10 @@ def ControlsV1GetPanels(request):
 	output = {}
 	for x in panels:
 		if x.label == None or x.label == "":
-			x.label = x.panel.title
+			x.label = x.get_title()
 		output[str(x.pk)] = {
 					"pk": str(x.pk),
-					"panelist": str(x.panel.panelist),
+					"panelist": str(x.get_panelist()),
 					"event": str(x.event),
 					"room": str(x.room.pk),
 					"title": str(x.label),
@@ -43,12 +47,15 @@ def ControlsV1GetPanels(request):
 					"date_slot": timezone.localtime(x.time_start).strftime("%m%d"),
 					"block_slot": timezone.localtime(x.time_start).strftime("%H%M"),
 					"setup": str((timezone.timedelta(minutes=x.setup_time).days * 24)+timezone.timedelta(minutes=x.setup_time).seconds//3600)+" Hours, "+str((timezone.timedelta(minutes=x.setup_time).seconds//60)%60)+" Minutes",
+					"setup_small": str((timezone.timedelta(minutes=x.setup_time).days * 24)+timezone.timedelta(minutes=x.setup_time).seconds//3600)+"H "+str((timezone.timedelta(minutes=x.setup_time).seconds//60)%60)+"M",
 					"setup_blocks": x.setup_time / 15,
 					"duration": str((timezone.timedelta(minutes=x.duration).days * 24)+timezone.timedelta(minutes=x.duration).seconds//3600)+" Hours, "+str((timezone.timedelta(minutes=x.duration).seconds//60)%60)+" Minutes",
+					"duration_small": str((timezone.timedelta(minutes=x.duration).days * 24)+timezone.timedelta(minutes=x.duration).seconds//3600)+"H "+str((timezone.timedelta(minutes=x.duration).seconds//60)%60)+"M",
 					"duration_blocks": x.duration / 15,
-					"r18": x.panel.r18,
-					"type": x.panel.type,
-					"track": str(x.panel.track),
+					"r18": x.get_r18(),
+					"track": x.get_track_name(),
+					"color": x.get_track_color(),
+					"click": x.get_click_action(),
 					}
 	return JsonResponse(output)
 
@@ -73,6 +80,7 @@ def ControlsV1GetEventDetail(request):
 	names_full = []
 	day_blocks = {}
 	reverse_day_blocks = {}
+	reverse_day_blocks_full = {}
 
 	i = 0
 	while i <= days:
@@ -80,21 +88,26 @@ def ControlsV1GetEventDetail(request):
 		names_full.append( ( (event.eventStart+timezone.timedelta(days=i)).strftime("%A"), (event.eventStart+timezone.timedelta(days=i)).strftime("%m%d%Y")  ) )
 		day_blocks[(event.eventStart+timezone.timedelta(days=i-1)).strftime("%m%d")] = i
 		reverse_day_blocks[i] = (event.eventStart+timezone.timedelta(days=i-1)).strftime("%m%d")
+		reverse_day_blocks_full[i] = (event.eventStart+timezone.timedelta(days=i-1)).strftime("%m%d%Y")
 		i = i + 1
 
 	day_blocks[(event.eventStart+timezone.timedelta(days=i-1)).strftime("%m%d")] = i
 	reverse_day_blocks[i] = (event.eventStart+timezone.timedelta(days=i-1)).strftime("%m%d")
+	reverse_day_blocks_full[i] = (event.eventStart+timezone.timedelta(days=i-1)).strftime("%m%d")
 	day_blocks[(event.eventStart+timezone.timedelta(days=i)).strftime("%m%d")] = i+1
 	reverse_day_blocks[i+1] = (event.eventStart+timezone.timedelta(days=i)).strftime("%m%d")
+	reverse_day_blocks_full[i+1] = (event.eventStart+timezone.timedelta(days=i)).strftime("%m%d")
 
 
 	output[str(event.pk)] = {
 				"title": event.name,
 				"start_date": event.eventStart.strftime("%m%d"),
+				"start_date_full": event.eventStart.strftime("%m%d%Y"),
 				"days": days,
 				"names": names,
 				"names_full": names_full,
 				"reverse_day_blocks": reverse_day_blocks,
+				"reverse_day_blocks_full": reverse_day_blocks_full,
 				"day_blocks": day_blocks,
 				}
 	return JsonResponse(output)
@@ -315,7 +328,7 @@ def manager(request,track_id=None):
 	filter = ""
 	if track_id != None:
 		track = get_object_or_404(Track, pk=track_id)
-		panels = panels.filter(panel__track=track)
+		panels = panels.filter(track=track)
 		filter=": "+track.title
 	context = {
 		"event": event,
@@ -331,7 +344,7 @@ def checkIn(request):
 	pnx = {}
 	for x in panelists:
 		pnx[str(x.pk)] = {"panelist": x,
-				"panels": PanelSlot.objects.filter(event=event,panel__panelist=x,panel__type=0).order_by('time_start')}
+				"panels": PanelSlot.objects.filter(event=event,panel__isnull=False).order_by('time_start')}
 	context = {
 		"event": event,
 		"events": events,
@@ -353,6 +366,43 @@ def panelDetail(request,panel_id):
 		"comments": comments,
 	}	
 	return render(request, 'event_detail.html', context)
+
+def slotMod(request,slot_id=None):
+	if slot_id == None:
+		# new
+		if request.method == "POST":
+			dte = str(str(request.POST['date']) + str(request.POST['hour']) + str(request.POST['minute']))
+			n = PanelSlot(
+				event=event,
+				label=request.POST['label'],
+				setup_notes=request.POST['setup_notes'],
+				time_start=datetime.datetime.strptime(dte,'%m%d%Y%H%M'),
+				duration=request.POST['duration'],
+				setup_time=request.POST['setup_time'],
+				room=Room.objects.filter(pk=request.POST['room']).first()
+			)
+			if request.POST['label'] == u'':
+				n.label = None
+			if request.POST['setup_notes'] == u'':
+				n.setup_notes = None
+			if request.POST['panel'] == u'':
+				n.panel = None
+			else:
+				n.panel = Panel.objects.filter(pk=request.POST['panel']).first()
+			n.save()
+			return redirect("events:new-slot")
+		else:
+			durations = PanelSlot.DURATIONS
+			setup_time = PanelSlot.SETUP_TIMES
+			panels = Panel.objects.filter(event=event)
+			return render(request, 'slot_mod.html', {"slot_id": slot_id, "durations": PanelSlot.DURATIONS, "setup_time": setup_time, "panels": panels,"event": event})
+	else:
+		pass
+		# previous
+
+def manageSlot(request,slot_id=None):
+	pass
+
 
 def ControlsV1CheckInPanelist(request,panelist_id):
 	panelist = get_object_or_404(Panelist,pk=panelist_id)
@@ -381,7 +431,6 @@ def ControlsV1PullPanelVerification(request,panel_id):
 				"room": str(panel.room),
 				"time_start": str(timezone.localtime(panel.time_start).strftime("%a %I:%M%p %Z")),
 				"time_end": str(timezone.localtime(panel.time_start+timezone.timedelta(minutes=panel.duration)).strftime("%a %I:%M%p %Z")),
-				"type": str(panel.panel.type),
 			}
 
 	lai = []
@@ -398,7 +447,7 @@ def ControlsV1PullPanelVerification(request,panel_id):
 		rooms[y.pk] = []
 		#asidei = 0
 		beforei = 0
-		for x in PanelSlot.objects.filter(event=event,room=y).order_by('time_start'):
+		for x in PanelSlot.objects.filter(Q(event=event) and Q(room=y)).order_by('time_start'):
 			checked = 0
 			# (datecode, meta, model)
 			# meta
@@ -420,14 +469,13 @@ def ControlsV1PullPanelVerification(request,panel_id):
 						output['panel_before'] = {}
 					else:
 						output['panel_before'] = {
-										"title": panel_before.panel.title,
+										"title": panel_before.get_title(),
 										"event": str(panel_before.event),
 										"room": str(panel_before.room),
 										"time_start": str(timezone.localtime(panel_before.time_start).strftime("%a %I:%M%p %Z")),
 										"time_end": str(timezone.localtime(panel_before.time_start+timezone.timedelta(minutes=panel_before.duration)).strftime("%a %I:%M%p %Z")),
-										"type": str(panel_before.panel.type),
-										"panelist": str(panel_before.panel.panelist),
-										"panelist_pk": str(panel_before.panel.panelist.pk),
+										"panelist": str(panel_before.get_panelist()),
+										"panelist_pk": str(panel_before.get_panelist_pk()),
 									}
 
 									
@@ -437,11 +485,11 @@ def ControlsV1PullPanelVerification(request,panel_id):
 				# 1. check if start is during before
 
 				if panel.time_start > time_start_setup and panel.time_start < time_end and panel != x:
-					output['conflicts'].append("Panel starts during Previous Panel ("+panel_before.panel.title+")")
+					output['conflicts'].append("Panel starts during Previous Panel ("+str(panel_before)+")")
 
 				# 2. check if setup start is during before
 				if m_panel_start_setup > time_start_setup and m_panel_start_setup < time_end and panel != x:
-					output['conflicts'].append("Panel Setup time starts during Previous Panel ("+panel_before.panel.title+")")
+					output['conflicts'].append("Panel Setup time starts during Previous Panel ("+str(panel_before)+")")
 
 			if beforei == 0:
 				panel_after = x
@@ -449,14 +497,13 @@ def ControlsV1PullPanelVerification(request,panel_id):
 				time_start_setup = timezone.localtime(panel_after.time_start-timezone.timedelta(minutes=panel_after.setup_time))
 				try:
 					output['panel_after'] = {
-									"title": panel_after.panel.title,
+									"title": str(panel_after),
 									"event": str(panel_after.event),
 									"room": str(panel_after.room),
 									"time_start": str(timezone.localtime(panel_after.time_start).strftime("%a %I:%M%p %Z")),
 									"time_end": str(timezone.localtime(panel_after.time_start+timezone.timedelta(minutes=panel_after.duration)).strftime("%a %I:%M%p %Z")),
-									"type": str(panel_after.panel.type),
-									"panelist": str(panel_after.panel.panelist),
-									"panelist_pk": str(panel_after.panel.panelist.pk),
+									"panelist": str(panel_after.get_panelist()),
+									"panelist_pk": str(panel_after.get_panelist_pk()),
 								}
 
 									
@@ -466,35 +513,36 @@ def ControlsV1PullPanelVerification(request,panel_id):
 				# check timing conflicts
 				# 1. check if start is during after
 				if panel.time_start > time_start_setup and panel.time_start < time_end:
-					output['conflicts'].append("Panel starts during Following Panel ("+panel_after.title+")")
+					output['conflicts'].append("Panel starts during Following Panel ("+str(panel_after)+")")
 
 				# 2. check if setup start is during after
 				if m_panel_start_setup > time_start_setup and m_panel_start_setup < time_end:
-					output['conflicts'].append("Panel Setup time starts during Following Panel ("+panel_after.title+")")
+					output['conflicts'].append("Panel Setup time starts during Following Panel ("+str(panel_after)+")")
 
 				# 3. check if end is anywhere beyond the time start of after
 				if m_panel_time_end > time_start_setup:
-					output['conflicts'].append("Panel Ends During or After Following Panel ("+panel_after.title+")")
+					output['conflicts'].append("Panel Ends During or After Following Panel ("+str(panel_after)+")")
 
 			time_start_setup = timezone.localtime(x.time_start-timezone.timedelta(minutes=x.setup_time))
 			time_end = timezone.localtime(x.time_start+timezone.timedelta(minutes=x.duration))
 
-			if panel.time_start >= time_start_setup and panel.time_start <= time_end and x.panel.type != 3 and checked == 0:
+			if panel.time_start >= time_start_setup and panel.time_start <= time_end and checked == 0:
 				checked = 1
 				if x.room != panel.room:
 					output['adjs'].append({
 							"title": x.panel.title,
 							"event": str(x.event),
 							"room": str(x.room),
-							"panelist": str(x.panel.panelist),
-							"panelist_pk": str(x.panel.panelist.pk),
+							"panelist": str(x.get_panelist()),
+							"panelist_pk": str(x.get_panelist_pk()),
 							"room_pk": str(x.room.pk),
 							"time_start": str(timezone.localtime(x.time_start).strftime("%a %I:%M%p %Z")),
 							"time_end": str(timezone.localtime(x.time_start+timezone.timedelta(minutes=x.duration)).strftime("%a %I:%M%p %Z")),
-							"type": str(x.panel.type),
+							"track": x.get_track_name(),
+							"color": x.get_track_color(),
 						})
 
-			if m_panel_time_end >= time_start_setup and m_panel_time_end <= time_end and x.panel.type != 3 and checked == 0:
+			if m_panel_time_end >= time_start_setup and m_panel_time_end <= time_end and checked == 0:
 				checked = 1
 				if x.room != panel.room:
 					output['adjs'].append({
@@ -502,11 +550,12 @@ def ControlsV1PullPanelVerification(request,panel_id):
 							"event": str(x.event),
 							"room": str(x.room),
 							"room_pk": str(x.room.pk),
-							"panelist": str(x.panel.panelist),
-							"panelist_pk": str(x.panel.panelist.pk),
+							"panelist": str(x.get_panelist()),
+							"panelist_pk": str(x.get_panelist_pk()),
 							"time_start": str(timezone.localtime(x.time_start).strftime("%a %I:%M%p %Z")),
 							"time_end": str(timezone.localtime(x.time_start+timezone.timedelta(minutes=x.duration)).strftime("%a %I:%M%p %Z")),
-							"type": str(x.panel.type),
+							"track": x.get_track_name(),
+							"color": x.get_track_color(),
 						})
 
 #			output = {
@@ -552,17 +601,19 @@ def ControlsV1PullEvents(request):
 
 			outp = {
 					"pk": str(x.pk),
-					"panelist": str(x.panel.panelist),
+					"panelist": str(x.get_panelist()),
 					"event": str(x.event),
 					"room": str(x.room.pk),
-					"title": str(x.panel.title),
+					"title": str(x.get_title()),
 					"time_start": str(timezone.localtime(x.time_start).strftime("%a %I:%M%p %Z")),
 					"time_end": str(timezone.localtime(x.time_start+timezone.timedelta(minutes=x.duration)).strftime("%a %I:%M%p %Z")),
 					"time_slot": timezone.localtime(x.time_start).strftime("%m%d%H%M"),
 					"setup": str(timezone.timedelta(minutes=x.setup_time).seconds//3600)+" Hours, "+str((timezone.timedelta(minutes=x.setup_time).seconds//60)%60)+" Minutes",
 					"duration": str(timezone.timedelta(minutes=x.duration).seconds//3600)+" Hours, "+str((timezone.timedelta(minutes=x.duration).seconds//60)%60)+" Minutes",
-					"r18": x.panel.r18,
-					"type": x.panel.type,
+					"r18": x.get_r18(),
+					"track": x.get_track_name(),
+					"color": x.get_track_color(),
+					"click": x.get_click_action(),
 					"happens": happens,
 					"in_setup": in_setup,
 				}
@@ -599,19 +650,21 @@ def ControlsV1PullEventsTimecode(request,timecode):
 
 			outp = {
 					"pk": str(x.pk),
-					"panelist": str(x.panel.panelist),
-					"event": str(x.panel.event),
+					"panelist": str(x.get_panelist()),
+					"event": str(x.event),
 					"room": str(x.room.pk),
-					"title": str(x.panel.title),
+					"title": str(x.get_title()),
 					"time_start": str(timezone.localtime(x.time_start).strftime("%a %I:%M%p %Z")),
 					"time_end": str(timezone.localtime(x.time_start+timezone.timedelta(minutes=x.duration)).strftime("%a %I:%M%p %Z")),
 					"time_slot": timezone.localtime(x.time_start).strftime("%m%d%H%M"),
 					"setup": str(timezone.timedelta(minutes=x.setup_time).seconds//3600)+" Hours, "+str((timezone.timedelta(minutes=x.setup_time).seconds//60)%60)+" Minutes",
 					"duration": str(timezone.timedelta(minutes=x.duration).seconds//3600)+" Hours, "+str((timezone.timedelta(minutes=x.duration).seconds//60)%60)+" Minutes",
-					"r18": x.panel.r18,
-					"type": x.panel.type,
+					"r18": x.get_r18(),
 					"happens": happens,
 					"in_setup": in_setup,
+					"track": x.get_track_name(),
+					"color": x.get_track_color(),
+					"click": x.get_click_action(),
 				}
 
 			genui.append( (timezone.localtime(x.time_start).strftime("%m%d%H%M"), False, outp, y.pk) )

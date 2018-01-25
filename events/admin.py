@@ -13,7 +13,7 @@ class PanelistAdmin(ImportExportModelAdmin):
 	list_filter = ['event']
 
 class PanelAdmin(ImportExportModelAdmin):
-	list_display = ('title','room','panelist','time_start','duration','setup_time','type','r18')
+	list_display = ('title','panelist','track','r18')
 	list_filter = ['event']
 
 class PanelSlotAdmin(ImportExportModelAdmin):

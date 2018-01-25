@@ -67,29 +67,9 @@
 									<b>Panelist</b>
 								</div>
 								<div class="col-md-8">
-									{% if panel.panelist.badge == None %}
-									{{ panel.panelist }}<br>
-										<span class="badge badge-dark">No Badge Assigned</span>
-									{% else %}
-									{{ panel.panelist.badge.badgeName }}<br>
-									{% if panel.panelist.badge.abandoned == "Abandoned" %}
-									<span class="badge badge-danger">Not Paid</span>
-									{% elif panel.panelist.badge.abandoned == "Staff" %}
-									<span class="badge badge-warning text-white">Staff</span>
-									{% elif panel.panelist.badge.abandoned == "Paid" or panel.panelist.badge.abandoned == "Comp" %}
-									<span class="badge badge-success">Paid & Registered</span>
-									{% endif %}
-									{% if panel.panelist.badge.printed %}
-										<span class="badge badge-success">Badge Picked Up</span>
-									{% else %}
-										<span class="badge badge-dark">Badge Not Picked Up</span>
-									{% endif %}
-									{% if panel.panelist.checked_in %}
-										<span class="badge badge-success">Checked In</span>
-									{% else %}
-										<span class="badge badge-dark">Not Checked In</span>
-									{% endif %}
-									{% endif %}
+									
+									{{ panel.panelist }}
+			
 
 								</div>
 							</div>
@@ -229,15 +209,21 @@ $(document).ready(function(){
 			$("#verification #main-row").append("<div class='col-md-6' id='scheduler'><div class='row'></div></div>");
 			// panel_after
 			$("#scheduler .row").append("<div class='ver-rows' id='panel-before'></div>");
+			if(data.panel_before.room === undefined){
+				$("#panel-before").append("<h5>Earlier Panel</h5><em>No Panels Before This</em>");
+			}else{
 			$("#panel-before").append("<h5>Earlier Panel <small>"+data.panel_before.room+"</small></h5>");
 			$("#panel-before").append("<p>"+data.panel_before.title+"<br><small>"+data.panel_before.panelist+"</small></p>");
 			$("#panel-before").append("<p>"+data.panel_before.time_start+"<br>to<br>"+data.panel_before.time_end+"</p>");
-
+			}
 			$("#scheduler .row").append("<div class='ver-rows' id='panel-after'></div>");
+			if(data.panel_after.room === undefined){
+				$("#panel-after").append("<h5>Next Panel</h5><em>No Panels After This</em>");
+			}else{
 			$("#panel-after").append("<h5>Next Panel <small>"+data.panel_after.room+"</small></h5>");
 			$("#panel-after").append("<p>"+data.panel_after.title+"<br><small>"+data.panel_after.panelist+"</small></p>");
 			$("#panel-after").append("<p>"+data.panel_after.time_start+"<br>to<br>"+data.panel_after.time_end+"</p>");
-
+			}
 			$("#verification #main-row").append("<div class='col-md-6' id='ver-other'></div>");
 			$("#ver-other").append("<h5>Adjacent Panels</h5>");
 

@@ -27,7 +27,7 @@
 					{% else %}
 				<td>
 					{% for z in x.getSlots %}
-					{% if z.time_start|timeuntil == "0 minutes" %}<span class="badge badge-info">{{ z.time_start|timesince }} ago</span>{% else %}<span class="badge badge-primary">Starts in {{z.time_start|timeuntil}}</span>{% endif %}
+					{% if z.time_start|timeuntil == "0 minutes" %}<span class="badge badge-info">{{ z.time_start|timesince }} ago</span>{% else %}<span class="badge badge-primary">Starts in {{z.time_start|timeuntil}}</span>{% endif %}<br>
 					{% endfor %}
 				</td>
 				<td class='text-right'> 	
@@ -41,7 +41,7 @@
 								{% if z.time_start|date:"D" == "Tue" %}<span class="badge badge-light">Tuesday</span>{% endif %}
 
 								{% if z.time_start|date:"G"|add:"0" >= 7 and z.time_start|date:"G"|add:"0" <= 15 %}<span class="badge badge-warning">{{ z.time_start|date:"G:i" }} ({{z.get_duration_display}})</span>{% endif %}
-								{% if z.time_start|date:"G"|add:"0" >= 16 and z.time_start|date:"G"|add:"0" <= 23 or z.time_start|date:"G"|add:"0" >= 0 and z.time_start|date:"G"|add:"0" <= 6  %}<span class="badge badge-dark">{{ z.time_start|date:"G:i" }} ({{z.get_duration_display}})</span>{% endif %}
+								{% if z.time_start|date:"G"|add:"0" >= 16 and z.time_start|date:"G"|add:"0" <= 23 or z.time_start|date:"G"|add:"0" >= 0 and z.time_start|date:"G"|add:"0" <= 6  %}<span class="badge badge-dark">{{ z.time_start|date:"G:i" }} ({{z.get_duration_display}})</span>{% endif %}<br>
 							{% endfor %}
 
 				</td>

@@ -37,24 +37,12 @@
 	border-bottom: 0px solid #000 !important;
 	
 }
-.empty-slot-middle {
-	border-left: 1px solid #000 !important;
-	border-right: 1px solid #000 !important;
-	background-color: transparent;
-	
-}
 .event-bottom {
 	border-bottom: 1px solid #000 !important;
 	border-left: 1px solid #000 !important;
 	border-right: 1px solid #000 !important;
 	border-top: 0px solid #000 !important;
 }
-.empty-slot-bottom {
-	border-bottom: 1px solid #000 !important;
-	border-left: 1px solid #000 !important;
-	border-right: 1px solid #000 !important;
-}
-
 
 </style>
 {% endblock %}
@@ -83,7 +71,7 @@
 			// setup rows from events
 			$.each(event[{{event.pk}}].names, function(day){
 				$("#visual").append("<div class='col-lg-12 col-md-12 col-sm-12 col-xs-12 row-division' id='row-"+event[{{event.pk}}].names[day][1]+"'><h1>"+event[{{event.pk}}].names[day][0]+"</h1></div>");
-				$("#row-"+event[{{event.pk}}].names[day][1]).append("<table class='table'  id='table-"+event[{{event.pk}}].names[day][1]+"' class='action-table'><thead class='thead-dark'><tr><th><h6>"+event[{{event.pk}}].names[day][0]+"</h6></th></tr></thead><tbody></tbody></table>");
+				$("#row-"+event[{{event.pk}}].names[day][1]).append("<table class='table'  id='table-"+event[{{event.pk}}].names[day][1]+"' class='action-table'><thead class='thead-inverse'><tr><th><h6>"+event[{{event.pk}}].names[day][0]+"</h6></th></tr></thead><tbody></tbody></table>");
 				$.each(rooms, function(pk,room){
 					$("#row-"+event[{{event.pk}}].names[day][1]+" thead tr").append("<th id='header-"+event[{{event.pk}}].names[day][1]+"-"+pk+"' class='header-tile white-space' data-pk='"+pk+"'>"+room.name+"</th>");
 				});
@@ -102,7 +90,7 @@
 						$.each(rooms, function(dm,ix){
 							var evi = event[{{event.pk}}].names[day][1];
 							try{
-								$("#tablerow-"+cxi+"-"+event[{{event.pk}}].names[dnv][1]).append("<td data-click='/backend/events/manage/slot/new/?timecode="+event[{{event.pk}}].names[dnv][1]+cxi+"&roomid="+dm+"' id='"+event[{{event.pk}}].names[dnv][1]+cxi+"-"+dm+"'></td>");
+								$("#tablerow-"+cxi+"-"+event[{{event.pk}}].names[dnv][1]).append("<td id='"+event[{{event.pk}}].names[dnv][1]+cxi+"-"+dm+"'></td>");
 							}catch(err){
 								$("#tablerow-"+cxi+"-"+event[{{event.pk}}].reverse_day_blocks[dnv+1]).append("<td id='"+event[{{event.pk}}].reverse_day_blocks[dnv+1]+cxi+"-"+dm+"'></td>");
 							}
@@ -116,14 +104,20 @@
 				if(blk>=69){
 					//panel.time_slot = (event[{{event.pk}}].reverse_day_blocks[(event[{{event.pk}}].day_blocks[panel.date_slot]+1).toString()])+panel.block_slot
 				}
-				$("#"+panel.time_slot+"-"+panel.room).attr("data-click",panel.click);
-				console.log(panel);
 				$("#"+panel.time_slot+"-"+panel.room).text(panel.title);
 				//$("#"+panel.time_slot+"-"+panel.room).addClass('white-space');
-				if(panel.title === "Empty Slot"){
-					$("#"+panel.time_slot+"-"+panel.room).css('background-color','transparent');
-				}else{
-					$("#"+panel.time_slot+"-"+panel.room).css('background-color',panel.color);
+				if(panel.type == 0){
+					$("#"+panel.time_slot+"-"+panel.room).addClass('bg-info');
+				}
+				if(panel.type == 1){
+					$("#"+panel.time_slot+"-"+panel.room).addClass('bg-inverse');
+					$("#"+panel.time_slot+"-"+panel.room).addClass('table-inverse');
+				}
+				if(panel.type == 2){
+					$("#"+panel.time_slot+"-"+panel.room).addClass('bg-success');
+				}
+				if(panel.type == 3){
+					$("#"+panel.time_slot+"-"+panel.room).addClass('bg-danger');
 				}
 				$("#"+panel.time_slot+"-"+panel.room).addClass('event-top');
 				n = 1;
@@ -148,27 +142,29 @@
 					if(n == 2){
 						$("#"+pds+block+"-"+panel.room).html("<small>"+panel.duration+"</small>");
 					}
-					$("#"+pds+block+"-"+panel.room).attr("data-click",panel.click);
 						//$("#"+panel.date_slot+block+"-"+panel.room).append("<small>(("+panel.pk+"))</small>");
 						//$("#"+panel.date_slot+block+"-"+panel.room).append("<small>(("+(blk+n)+"))</small>");
-					if(panel.title === "Empty Slot"){
-						$("#"+pds+block+"-"+panel.room).addClass('empty-slot-middle');
-					}else{
-						$("#"+pds+block+"-"+panel.room).css('background-color',panel.color);
-						$("#"+pds+block+"-"+panel.room).addClass('event-middle');
+					if(panel.type == 0){
+						$("#"+pds+block+"-"+panel.room).addClass('bg-info');
 					}
+					if(panel.type == 1){
+						$("#"+pds+block+"-"+panel.room).addClass('bg-inverse');
+						$("#"+pds+block+"-"+panel.room).addClass('table-inverse');
+					}
+					if(panel.type == 2){
+						$("#"+pds+block+"-"+panel.room).addClass('bg-success');
+					}
+					if(panel.type == 3){
+						$("#"+pds+block+"-"+panel.room).addClass('bg-danger');
+					}
+					$("#"+pds+block+"-"+panel.room).addClass('event-middle');
 					if((blk+n) == 96){
 						blk = 0 - n;
 					}
 					n++;
 					if(n == panel.duration_blocks){
-						if(panel.title === "Empty Slot"){
-							$("#"+pds+block+"-"+panel.room).removeClass('empty-slot-middle');
-							$("#"+pds+block+"-"+panel.room).addClass('empty-slot-bottom');
-						}else{
-							$("#"+pds+block+"-"+panel.room).removeClass('event-middle');
-							$("#"+pds+block+"-"+panel.room).addClass('event-bottom');
-						}
+						$("#"+pds+block+"-"+panel.room).removeClass('event-middle');
+						$("#"+pds+block+"-"+panel.room).addClass('event-bottom');
 					}
 				}
 				n = 0;
@@ -244,14 +240,6 @@
 
 		}
 		init();
-		$(document).on("click","#visual", function(event){
-			switch($(event.target).data("click")){
-				case undefined:
-					break;
-				default:
-					alert($(event.target).data("click"));
-			}
-		});
 	});
 </script>
 {% endblock %}

@@ -1,0 +1,32 @@
+{% extends "convention_base.html" %}
+{% block body %}
+<h1>Staff &amp; HR</h1>
+<div class="row">
+	<div class="col-md-4">
+		<a href="{% url "frontend:backend-hr-roster" %}" class="btn btn-block btn-info">Show Full Roster</a>
+	</div>
+	<div class="col-md-4">
+		<a href="#" class="btn btn-block btn-info">New Staffer</a>
+	</div>
+	<div class="col-md-4">
+		<a href="#" class="btn btn-block btn-info">Display Tree</a>
+	</div>
+</div>
+<h2>By Department</h2>
+<table class="table table-striped">
+	<thead>
+		<tr>
+			<th>Department Name</th>
+			<th>Staff Total</th>
+		</tr>
+	</thead>
+	<tbody>
+		{% for x in departments %}
+		<tr>
+			<td><a href="{% url "frontend:backend-hr-roster-department" x.pk %}">{{x.name}}</a></td>
+			<td>{{x.staff.count}}</td>
+		</tr>
+		{% endfor %}
+	</tbody>
+</table>
+{% endblock %}

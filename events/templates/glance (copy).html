@@ -226,6 +226,19 @@
 								$("#room-"+cur[3]).parent().children(".card-header").addClass("happening-now duration");
 								$("#room-"+cur[3]).append("<h6 class='card-subtitle'>Happening Now</h6><p class='card-text'>"+disp0[2].title+deets(disp0[2])+"</p>");
 							}
+							if(disp0[2].type == 3){
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("duration");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("p-setup");
+								$("#room-"+cur[3]).parent().children(".card-header").addClass("ops");
+							}
+							if(disp0[2].type == 1){
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("duration");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("p-setup");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("ops");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("happening-now");
+								$("#room-"+cur[3]).parent().children(".card-header").addClass("bg-inverse");
+								$("#room-"+cur[3]).parent().addClass("bg-inverse text-white");
+							}
 						}else{
 							$("#room-"+cur[3]).append("<h6 class='card-subtitle text-muted'><small>Wrapped Up</small></h6><p class='card-text'><small>"+disp0[2].title+deets(disp0[2])+"</small></p>");
 						}
@@ -237,8 +250,21 @@
 								$("#room-"+cur[3]).parent().children(".card-header").addClass("happening-now p-setup");
 								$("#room-"+cur[3]).append("<h6 class='card-subtitle'>Setting Up</h6><p class='card-text'>"+disp1[2].title+deets(disp1[2])+"</p>");
 							}else{
-								$("#room-"+cur[3]).parent().children(".card-header").addClass("happening-now");
+								$("#room-"+cur[3]).parent().children(".card-header").addClass("happening-now duration");
 								$("#room-"+cur[3]).append("<h6 class='card-subtitle'>Happening Now</h6><p class='card-text'>"+disp1[2].title+deets(disp1[2])+"</p>");
+							}
+							if(disp1[2].type == 3){
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("duration");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("p-setup");
+								$("#room-"+cur[3]).parent().children(".card-header").addClass("ops");
+							}
+							if(disp1[2].type == 1){
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("duration");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("p-setup");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("ops");
+								$("#room-"+cur[3]).parent().children(".card-header").removeClass("happening-now");
+								$("#room-"+cur[3]).parent().children(".card-header").addClass("bg-inverse");
+								$("#room-"+cur[3]).parent().addClass("bg-inverse text-white");
 							}
 						}else{
 							$("#room-"+cur[3]).append("<h6 class='card-subtitle text-muted'><small>Up Next</small></h6><p class='card-text'><small> "+disp1[2].title+deets(disp1[2])+"</small></p>");
