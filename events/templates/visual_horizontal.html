@@ -165,7 +165,7 @@ moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm")
 
 		function populateEvents(){
 			$("table td").attr("data-click",undefined);
-			$(".event-td").removeClass("event-bottom event-middle event-top empty-slot-middle empty-slot-top empty-slot-bottom");
+			$(".event-td").removeClass("event-bottom event-middle event-top empty-slot-middle empty-slot-top empty-slot-bottom bg-warning");
 			$(".event-td").attr("style","");
 			$(".event-td").text("");
 			$.each(panels, function(pk,panel){

@@ -396,7 +396,7 @@ def slotMod(request,slot_id=None):
 		else:
 			durations = PanelSlot.DURATIONS
 			setup_time = PanelSlot.SETUP_TIMES
-			panels = Panel.objects.filter(event=event)
+			panels = Panel.objects.filter(event=event).order_by('title')
 			return render(request, 'slot_mod.html', {"slot_id": slot_id, "durations": PanelSlot.DURATIONS, "setup_time": setup_time, "panels": panels,"event": event, "slot": None})
 	else:
 		# previous
@@ -425,7 +425,7 @@ def slotMod(request,slot_id=None):
 		else:
 			durations = PanelSlot.DURATIONS
 			setup_time = PanelSlot.SETUP_TIMES
-			panels = Panel.objects.filter(event=event)
+			panels = Panel.objects.filter(event=event).order_by('title')
 			return render(request, 'slot_mod.html', {"slot_id": slot_id, "durations": PanelSlot.DURATIONS, "setup_time": setup_time, "panels": panels,"event": event, "slot": slot})
 
 def ControlsV1HelperClose(request):
@@ -561,7 +561,7 @@ def ControlsV1PullPanelVerification(request,panel_id):
 				checked = 1
 				if x.room != panel.room:
 					output['adjs'].append({
-							"title": x.panel.title,
+							"title": str(x),
 							"event": str(x.event),
 							"room": str(x.room),
 							"panelist": str(x.get_panelist()),
@@ -577,7 +577,7 @@ def ControlsV1PullPanelVerification(request,panel_id):
 				checked = 1
 				if x.room != panel.room:
 					output['adjs'].append({
-							"title": x.panel.title,
+							"title": str(x),
 							"event": str(x.event),
 							"room": str(x.room),
 							"room_pk": str(x.room.pk),
