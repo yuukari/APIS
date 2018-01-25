@@ -390,15 +390,46 @@ def slotMod(request,slot_id=None):
 			else:
 				n.panel = Panel.objects.filter(pk=request.POST['panel']).first()
 			n.save()
+			if request.POST['popup']:
+				return redirect("events:helper-close")
 			return redirect("events:new-slot")
 		else:
 			durations = PanelSlot.DURATIONS
 			setup_time = PanelSlot.SETUP_TIMES
 			panels = Panel.objects.filter(event=event)
-			return render(request, 'slot_mod.html', {"slot_id": slot_id, "durations": PanelSlot.DURATIONS, "setup_time": setup_time, "panels": panels,"event": event})
+			return render(request, 'slot_mod.html', {"slot_id": slot_id, "durations": PanelSlot.DURATIONS, "setup_time": setup_time, "panels": panels,"event": event, "slot": None})
 	else:
-		pass
 		# previous
+		slot = get_object_or_404(PanelSlot, pk=slot_id)
+		if request.method == "POST":
+			dte = str(str(request.POST['date']) + str(request.POST['hour']) + str(request.POST['minute']))
+			time = datetime.datetime.strptime(dte,'%m%d%Y%H%M')
+			slot.label=request.POST['label']
+			slot.setup_notes=request.POST['setup_notes']
+			slot.time_start=datetime.datetime.strptime(dte,'%m%d%Y%H%M')
+			slot.duration=request.POST['duration']
+			slot.setup_time=request.POST['setup_time']
+			slot.room=Room.objects.filter(pk=request.POST['room']).first()
+			if request.POST['label'] == u'':
+				slot.label = None
+			if request.POST['setup_notes'] == u'':
+				slot.setup_notes = None
+			if request.POST['panel'] == u'':
+				slot.panel = None
+			else:
+				slot.panel = Panel.objects.filter(pk=request.POST['panel']).first()
+			slot.save()
+			if request.POST['popup']:
+				return redirect("events:helper-close")
+			return redirect("events:edit-slot",slot_id=slot.pk)
+		else:
+			durations = PanelSlot.DURATIONS
+			setup_time = PanelSlot.SETUP_TIMES
+			panels = Panel.objects.filter(event=event)
+			return render(request, 'slot_mod.html', {"slot_id": slot_id, "durations": PanelSlot.DURATIONS, "setup_time": setup_time, "panels": panels,"event": event, "slot": slot})
+
+def ControlsV1HelperClose(request):
+	return render(request, 'helper_close.html', {})
 
 def manageSlot(request,slot_id=None):
 	pass

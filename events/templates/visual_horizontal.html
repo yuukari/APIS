@@ -87,6 +87,7 @@
 	<div id="visual">
 
 	</div>
+	<div id="callback">ready</div>
 	<div id="dev"></div>
 {% endblock %}
 {% block scripting %}
@@ -145,7 +146,7 @@ moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm")
 						$.each(rooms, function(dm,ix){
 							var evi = event[{{event.pk}}].names[day][1];
 							try{
-								$("#tablerow-"+event[{{event.pk}}].names[dnv][1]+"-"+dm).append("<td data-click='/backend/events/manage/slot/new/?date="+event[{{event.pk}}].names[day][1]+"&time="+cxi+"&roomid="+dm+"' id='"+event[{{event.pk}}].names[day][1]+cxi+"-"+dm+"'></td>");
+								$("#tablerow-"+event[{{event.pk}}].names[dnv][1]+"-"+dm).append("<td class='event-td' data-default-click='/backend/events/manage/slot/new/?date="+event[{{event.pk}}].names_full[day][1]+"&time="+cxi+"&roomid="+dm+"&popup=1' id='"+event[{{event.pk}}].names[day][1]+cxi+"-"+dm+"'></td>");
 							}catch(err){
 								//$("#tablerow-"+event[{{event.pk}}].reverse_day_blocks[dnv+1]+"-"+dm).append("<td id='"+event[{{event.pk}}].reverse_day_blocks[dnv+1]+cxi+"-"+dm+"'></td>");
 								$("#tablerow-"+event[{{event.pk}}].reverse_day_blocks[dnv]+"-"+dm).append("<td id='"+event[{{event.pk}}].reverse_day_blocks[day]+cxi+"-"+dm+"'></td>");
@@ -154,6 +155,19 @@ moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm")
 				});
 			});
 			$("#loading_status").text("Populating Events");
+			populateEvents();
+			//$('table').stickyTableHeaders({fixedOffset: $(".navbar")});
+			//$('table').stickyTableHeaders();
+			$("#loading_status").text("Let's disco.");
+			$("#loading").fadeOut();
+			
+		}
+
+		function populateEvents(){
+			$("table td").attr("data-click",undefined);
+			$(".event-td").removeClass("event-bottom event-middle event-top empty-slot-middle empty-slot-top empty-slot-bottom");
+			$(".event-td").attr("style","");
+			$(".event-td").text("");
 			$.each(panels, function(pk,panel){
 				blk = reverseblocks[panel.block_slot];
 				dayb = (event[{{event.pk}}].day_blocks[panel.date_slot]).toString();
@@ -189,7 +203,8 @@ moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm")
 					$("#"+pds+block+"-"+panel.room).attr("data-click",panel.click);
 						//$("#"+panel.date_slot+block+"-"+panel.room).append("<small>(("+panel.pk+"))</small>");
 						//$("#"+panel.date_slot+block+"-"+panel.room).append("<small>(("+(blk+n)+"))</small>");
-					if(panel.title === "Empty Slot"){
+					if(panel.color === "transparent"){
+						$("#"+pds+block+"-"+panel.room).css('background-color',panel.color);
 						$("#"+pds+block+"-"+panel.room).addClass('empty-slot-middle');
 					}else{
 						$("#"+pds+block+"-"+panel.room).css('background-color',panel.color);
@@ -232,14 +247,9 @@ moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm")
 				}
 
 			});
-			//$('table').stickyTableHeaders({fixedOffset: $(".navbar")});
-			//$('table').stickyTableHeaders();
-			$("#loading_status").text("Let's disco.");
-			$("#loading").fadeOut();
-			
 		}
 
-		function getAPI(){
+		function getAPI(refresh=false){
 			panels = {};
 			rooms = {};
 			event = {};
@@ -263,7 +273,11 @@ moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm")
 							blocks = data4.blocks;
 							$.get('/backend/events/controls/v1/helpers/reverseblocks/', function(data5){
 								reverseblocks = data5.blocks;
-								tableBuild();
+								if(refresh === false){
+									tableBuild();
+								}else{
+									populateEvents();
+								}
 							});
 						});
 					});
@@ -280,16 +294,24 @@ moment((event[{{event.pk}}].reverse_day_blocks_full[dnxi+1]+cxi),"MMDDYYYYHHmm")
 
 			$("#loading_status").text("Contacting the chairman..");
 			getAPI();
+			
 
 		}
 		init();
 		$(document).on("click","#visual", function(event){
 			switch($(event.target).data("click")){
 				case undefined:
+					if($(event.target).data("default-click") != undefined){
+						window.open($(event.target).data("default-click"),"_blank","width=750,height=750,left=35%,top=25%,menubar=no,statusbar=no");
+					}
 					break;
 				default:
-					alert($(event.target).data("click"));
+					window.open($(event.target).data("click"),"_blank","width=750,height=750,left=35%,top=25%,menubar=no,statusbar=no");
+					//alert($(event.target).data("click"));
 			}
+		});
+		$("#callback").bind("DOMSubtreeModified",function(event){
+			getAPI(refresh=true);
 		});
 	});
 </script>

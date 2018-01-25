@@ -303,9 +303,9 @@ class PanelSlot(models.Model):
 			return self.panel.track.title
 	def get_track_color(self):
 		if self.panel == None:
-			return "#000000"
+			return "transparent"
 		else:
 			return self.panel.track.color
 	def get_click_action(self):
-		return "/backend/events/manage/slot/"+str(self.pk)+"/"
+		return "/backend/events/manage/slot/"+str(self.pk)+"/edit/?popup=1"
 

@@ -2,8 +2,12 @@
 {% block head %}
 {% endblock %}
 {% block body %}
-<h1 id='title' data-pk='{{ event.pk }}'>New Slot</h1>
-<form method="POST" action="{% url "events:new-slot" %}">
+<h1 id='title' data-pk='{{ event.pk }}'>{% if slot %}Edit Slot: {{slot.get_title}}{% else %}New Slot{% endif %}</h1>
+{% if slot %}
+<form method="POST" action="{% url "events:edit-slot" slot.pk %}" id='slot_form' data-edit=true>
+{% else %}
+<form method="POST" action="{% url "events:new-slot" %}" id='slot_form'>
+{% endif %}
 {%csrf_token%}
 <div class="form-group row">
 <div class="col-md-2">
@@ -11,6 +15,9 @@
 </div>
 <div class="col-md-10">
 <select class='form-control' name='panel'>
+	{% if slot and slot.panel %}
+		<option value="{{slot.panel.pk}}">{{slot.panel.title}} (Current)</option>
+	{% endif %}
 		<option value>-------------</option>
 	{% for x in panels %}
 		<option value="{{x.pk}}" data-r18="{{x.r18}}">{{x.title}} {% if x.accepted %}[Approved]{% endif %}</option>
@@ -24,7 +31,7 @@
 <p class="col-form-label">Label</p>
 </div>
 <div class="col-md-10">
-<input type="text" class="form-control" name='label' placeholder="If panel is selected, leave blank.">
+<input type="text" class="form-control" name='label' value="{% if slot and slot.label != None %}{{slot.label}}{% endif %}" placeholder="If panel is selected, leave blank.">
 </div>
 </div>
 
@@ -33,7 +40,7 @@
 <p class="col-form-label">Setup Notes</p>
 </div>
 <div class="col-md-10">
-<textarea class="form-control" rows='5' name='setup_notes'></textarea>
+<textarea class="form-control" rows='5' name='setup_notes'>{% if slot and slot.setup_notes != None %}{{slot.setup_notes}}{% endif %}</textarea>
 </div>
 </div>
 
@@ -43,6 +50,9 @@
 </div>
 <div class="col-md-10">
 <select required class='form-control' id="rooms" name='room'>
+	{% if slot and slot.room %}
+		<option value="{{slot.room.pk}}">{{slot.room}} (Current)</option>
+	{% endif %}
 </select>
 </div>
 </div>
@@ -55,10 +65,16 @@
 </div>
 <div class="col-md-6">
 <select required class='form-control' id='date' name='date'>
+	{% if slot %}
+		<option value="{{slot.time_start|date:"mdY"}}">{{slot.time_start|date:'l'}} (Current)</option>
+	{% endif %}
 </select>
 </div>
 <div class="col-md-2">
 <select required class='form-control' id='hour' name='hour'>
+		{% if slot %}
+		<option value="{{slot.time_start|date:"H"}}">{{slot.time_start|date:"H"}}&nbsp;&nbsp;&nbsp;(Current)</option>
+		{% endif %}
 		<option value="00">00</option>
 		<option value="01">01</option>
 		<option value="02">02</option>
@@ -87,6 +103,9 @@
 </div>
 <div class="col-md-2">
 <select required class='form-control' id='minute' name='minute'>
+		{% if slot %}
+		<option value="{{slot.time_start|date:"i"}}">{{slot.time_start|date:"i"}}&nbsp;&nbsp;&nbsp;(Current)</option>
+		{% endif %}
 	<option value="00">00</option>
 	<option value="15">15</option>
 	<option value="30">30</option>
@@ -101,7 +120,10 @@
 </div>
 <div class="col-md-10">
 <select required class='form-control' name='duration'>
-		<option disabled selected value>--------</option>
+		{% if slot %}
+		<option value="{{slot.duration}}">{{slot.get_duration_display}} (Current)</option>
+		{% endif %}
+		<option disabled value>--------</option>
 	{% for x in durations %}
 		<option value="{{x.0}}">{{x.1}}</option>
 	{% endfor %}
@@ -115,6 +137,9 @@
 </div>
 <div class="col-md-10">
 <select required class='form-control' name='setup_time'>
+		{% if slot %}
+		<option value="{{slot.setup_time}}">{{slot.get_setup_time_display}} (Current)</option>
+		{% endif %}
 	{% for x in setup_time %}
 		<option value="{{x.0}}">{{x.1}}</option>
 	{% endfor %}
@@ -122,23 +147,66 @@
 </div>
 </div>
 
-
+{% if slot %}
+<button type="submit" class="btn btn-success btn-block" value="Submit">Edit Slot</button>
+{% else %}
 <button type="submit" class="btn btn-success btn-block" value="Submit">Add New Slot</button>
+{% endif %}
 </form>
 {% endblock %}
 {% block scripting %}
 <script type="text/javascript">
 	$(document).ready(function() {
+var getUrlParameter = function getUrlParameter(sParam) {
+    var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : sParameterName[1];
+        }
+    }
+};
+		if(getUrlParameter("popup") != undefined){
+			$("nav").addClass("d-none");
+			$(".subnav").addClass("d-none");
+			$("#title").css("margin-top","10%");
+			$("#slot_form").append("<input type='hidden' name='popup' value='true'>");
+		}
 		$.get('/backend/events/controls/v1/', function(data){
 			$.each(data[$("#title").data("pk")].names_full, function(i,o){
 				$("#date").append("<option value='"+o[1]+"'>"+o[0]+"</option>");
 			});
+			if(getUrlParameter("date") != undefined){
+				try{
+					$('#date option[value="'+getUrlParameter("date")+'"]').prop("selected", true);
+					$('#hour option[value="'+getUrlParameter("time").substring(0,2)+'"]').prop("selected", true);
+					$('#minute option[value="'+getUrlParameter("time").substring(2,4)+'"]').prop("selected", true);
+				}catch(err){}
+			}
 		});
 
 		$.get('/backend/events/controls/v1/rooms/', function(data){
 			$.each(data, function(i,o){
 				$("#rooms").append("<option value='"+o.pk+"'>"+o.name+"</option>");
 			});
+			if(getUrlParameter("roomid") != undefined){
+				try{
+					$('#rooms option[value="'+getUrlParameter("roomid")+'"]').prop("selected", true);
+				}catch(err){}
+			}
+		});
+		$('#slot_form').submit(function(e) {
+		  if(getUrlParameter("popup") != undefined){
+			  //e.preventDefault();
+			  //alert("hi");
+			  opener.document.getElementById("callback").innerHTML = "changed"; // or opener.location.href = opener.location.href;
+	  		  //window.close(); // or self.close();
+		  }
 		});
 	});
 </script>
