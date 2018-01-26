@@ -1,0 +1,61 @@
+{% extends "convention_base.html" %}
+{% block head %}
+<style>
+.indent {
+	margin-left: 25px;
+}
+</style>
+{% endblock %}
+{% block body %}
+<h1>Department Tree</h1>
+<div id="workspace">
+	{% for x in parents %}
+		<div id="parent-{{x.pk}}">
+			<h1>{{x.name}} {% if x.head %}<small class='pull-right'>Department Head: {{x.head}}</small>{% endif %}</h1>
+			<div class="staff">
+				<ul>
+					{% for y in x.staff %}
+					<li><a href="{{y.pk}}">{{y}}</a></li>
+					{% endfor %}
+				</ul>
+			</div>
+			<hr>
+			<div id="children-{{x.pk}}">
+
+			</div>
+		</div>
+	{% endfor %}
+</div>
+{% endblock %}
+{% block scripting %}
+<script type="text/javascript">
+$(document).ready(function(){
+	$.get('json/', function(data){
+		var end = false;
+		var gen = 1;
+		while(end === false){
+			lst = 0;
+			$.each(data.departments, function(i,o){
+				if(o.generation === gen){
+					$("#parent-"+o.parentDepartmentPk+" #children-"+o.parentDepartmentPk).append("<div class='indent' id='parent-"+o.pk+"'><h"+(gen+1)+">"+o.name+"</h"+(gen+1)+"><div id='staff-"+o.pk+"'></div><hr><div id='children-"+o.pk+"'></div>");
+					$("#parent-"+o.pk+" #staff-"+o.pk).append("<ul></ul>");
+					$.each(o.staff, function(r,q){
+						$("#parent-"+o.pk+" #staff-"+o.pk+" ul").append("<li><a href='"+q[0]+"'>"+q[1]+"</a></li>");
+					});
+					if(o.headPk != null){
+						$("#parent-"+o.pk+" h"+(gen+1)).append(" <small class='pull-right'>Department Head: "+o.head+"</small>");
+					}
+					lst++;
+				}
+			});
+			if(lst === 0){
+				end = true;
+			}else{
+				gen++;
+			}
+			
+		}
+	});
+});
+</script>
+{% endblock %}

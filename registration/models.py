@@ -5,7 +5,7 @@ import string
 from decimal import *
 from django.db import models
 from django.utils import timezone
-
+from django.db.models import Q
 
 #######################################
 # As of Data Model version 27
@@ -59,6 +59,8 @@ class TableSize(LookupTable):
 class Department(models.Model):
     name = models.CharField(max_length=200, blank=True)
     event = models.ForeignKey(Event)
+    head = models.ForeignKey('registration.Staff',blank=True,null=True,on_delete=models.SET_NULL,related_name='dept_head')
+    parentDepartment = models.ForeignKey('self',blank=True,null=True,on_delete=models.SET_NULL)
     volunteerListOk = models.BooleanField(default=False)
 
     def __str__(self):
@@ -66,6 +68,27 @@ class Department(models.Model):
 
     def staff(self):
       return Staff.objects.filter(department=self)
+
+    def staffCount(self):
+      cnt = self.staff().count()
+      for x in Department.objects.filter(parentDepartment=self):
+        cnt += x.staffCount()
+      return cnt
+
+    def generation(self):
+      last = False
+      gen = 0
+      current = self
+      while last == False:
+        if current.parentDepartment != None:
+          current = current.parentDepartment
+          gen += 1
+        else:
+          last = True
+      return gen
+
+    def getChildren(self):
+      return Department.objects.filter(parentDepartment=self)
 
 #End lookup and supporting tables
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from django.http import JsonResponse
 from django.shortcuts import render,get_object_or_404
 from registration.models import Event,Department,Staff
 
@@ -47,3 +48,34 @@ def staffRoster(request,dept_pk=None):
 			"staff": staff
 		}
 		return render(request, 'hr_staff_list.html', context)
+
+def staffTree(request):
+	departments = Department.objects.filter(event=event,parentDepartment=None)
+	context = {
+		"parents": departments
+	}
+	return render(request, 'hr_staff_tree.html', context)
+
+def staffTreeJSON(request):
+	dn = {"departments": []}
+	for x in Department.objects.filter(event=event):
+		dpt = {
+			"name": x.name,
+			"head": str(x.head),
+			"parentDepartment": str(x.parentDepartment),
+			"parentDepartmentPk": None,
+			"headPk": None,
+			"pk": x.pk,
+			"staffCountLocal": x.staff().count(),
+			"staffCountAll": x.staffCount(),
+			"generation": x.generation(),
+			"staff": [],
+		}
+		if x.parentDepartment != None:
+			dpt['parentDepartmentPk'] = x.parentDepartment.pk
+		if x.head != None:
+			dpt['headPk'] = x.head.pk
+		for n in x.staff():
+			dpt['staff'].append( ( n.pk, str(n) ) )
+		dn['departments'].append(dpt)
+	return JsonResponse(dn)
