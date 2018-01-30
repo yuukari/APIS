@@ -61,9 +61,12 @@
                     <label for="email" class="col-sm-3 control-label">Email <span style="color:red;">*</span></label>
                     <div class="col-sm-9">
                         <input type="email" id="email" value="{{dealer.attendee.email}}" class="form-control" disabled />
-                        <input type="checkbox" id="contact"> <span class="control-label" >Please keep me up to date with convention related information.</span>
-                        <br/> 
-                        <input type="checkbox" id="survey"> <span class="control-label" >Please send me the post-con survey.</span>
+                        <label>
+                            <input type="checkbox" id="contact"> <span class="control-label" >Please keep me up to date with convention related information.</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="survey"> <span class="control-label" >Please send me the post-con survey.</span>
+                        </label>
                     </div>
 		    <div class="col-sm-offset-3 help-block with-errors"style=" padding-left:15px;"></div>
 		</div>
@@ -377,7 +380,7 @@
     var shirtSizes = [];
 
 	$( "body" ).ready(function() {
-		$.getJSON("/apis/registration/pricelevels", function(data) {
+		$.getJSON("{% url 'pricelevels' %}", function(data) {
 			levelData = data;
 			var prevLevel = 45;
 			if (currentLevel && currentLevel.hasOwnProperty("basePrice")){
@@ -397,7 +400,7 @@
 			}
 
 		});
-		$.getJSON("/apis/registration/shirts", function(data) {
+		$.getJSON("{% url 'shirtsizes' %}", function(data) {
 			shirtSizes = data;
 			if (levelTemplateData.length > 0){
 				$(".selectLevel")[0].click();
@@ -645,7 +648,7 @@
 		$.ajax({
 		    "type": "POST",
 		    "dataType": "json",
-		    "url": "/apis/registration/dealer/add/",
+		    "url": "{% url 'newDealer' %}",
 		    "data": JSON.stringify(data),
 		    "beforeSend": function(xhr, settings) {
 		        console.log("Before Send");
@@ -662,7 +665,7 @@
                     "success": function (result, status) {
                         if (result.success)
                         {
-                            window.location = "/apis/registration/dealer/invoice";
+                            window.location = "{% url 'invoiceDealer' %}";
                         } else {
 			    $("#checkout").removeAttr("disabled");
                             alert("An error has occurred: " + result.message + " Please check the form an your payment information for errors. If this error continues, please contact exhibitions@furthemore.org for assistence.");
