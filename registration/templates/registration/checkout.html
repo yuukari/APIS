@@ -164,7 +164,24 @@ var paymentForm = new SqPaymentForm({
 
 	
 		<br/>
+        {% if not discount.newStaffEvent and not discount.staffEvent  %}
 		<a class="btn btn-primary" id="addAnother">Add Another Attendee</a> <a class="btn" id="cancel">Cancel Registraiton</a>
+        {% endif %}
+
+        {% if hasMinors %}
+		<hr/>
+        <h3>Important Information About Minor Registration</h3>
+        <div class="row">
+          <div class="col-sm-11 col-sm-offset-1">
+           One or more of the attendees in this order will still be minors at the start of the convention. 
+           Please note that we require a parent or guardian to be present at registration to sign our
+           consent form for all minor attendees. Any attendee under the age of 13 (by the start of the convention) 
+           must have a parent or guardian also register and accompany them during the event. If you have
+           any questions about our policies, please contact 
+           <a href="mailto:regitration@furthemore.org">registration@furthemore.org</a>.
+          </div>
+        </div>
+        {% endif %}
 
 		<hr/>
 		{% if total > 0%}
@@ -196,36 +213,39 @@ var paymentForm = new SqPaymentForm({
             <div class="col-sm-4">
                 <div class="input-group">
                     <div class="input-group-addon">$</div>
-                    <input type="number" id="donateCharity" class="form-control" placeholder="0.00" min="0" 
-                     step="0.01" pattern="\d*(\.\d{0,2})?">
+                    <input type="text" pattern="^\d+(?:\.\d{0,2})?$" placeholder="0.00" id="donateCharity" class="form-control validate"  data-error="Please use only numbers and a decimal." />
                 </div>
             </div>
+		    <div class="col-sm-offset-3 help-block with-errors"style=" padding-left:15px;"></div>
         </div>
         <div class="form-group">
             <label for="donateOrg" class="col-sm-3 control-label">Donate to Furthemore</label>
             <div class="col-sm-4">
                 <div class="input-group">
                     <div class="input-group-addon">$</div>
-                    <input type="number" id="donateOrg" class="form-control" placeholder="0.00" min="0" step="0.01">
+                    <input type="text" pattern="^\d+(?:\.\d{0,2})?$" placeholder="0.00" id="donateOrg" class="form-control validate"  data-error="Please use only numbers and a decimal." />
                 </div>
             </div>
+		    <div class="col-sm-offset-3 help-block with-errors"style=" padding-left:15px;"></div>
         </div>
 		<hr/>
 
 
 		<h3>Billing Information</h3>
 
-
+        {% if not hasMinors %}
 		<div class="form-group">
-                    <label for="useFrom" class="col-sm-3 control-label">Use Billing Info From</label>
-                    <div class="col-sm-9">
-                        <select id="useFrom" class="form-control" ><option value="" selected>The Fields Below</option>
-			{% for oi in orderItems %}
-			    <option value="{{oi.badge.attendee.id}}">{{oi.badge.attendee}}</option>
-			{% endfor %}
-			</select>
-                    </div>
+            <label for="useFrom" class="col-sm-3 control-label">Use Billing Info From</label>
+            <div class="col-sm-9">
+                <select id="useFrom" class="form-control" ><option value="" selected>The Fields Below</option>
+			    {% for oi in orderItems %}
+			        <option value="{{oi.badge.attendee.id}}">{{oi.badge.attendee}}</option>
+			    {% endfor %}
+			    </select>
+            </div>
 		</div>
+        {% endif %}
+
 		<div class="form-group">
                     <label for="billingName" class="col-sm-3 control-label">Billing Name<span style="color:red;">*</span></label>
                     <div class="col-sm-4">
@@ -346,8 +366,8 @@ var paymentForm = new SqPaymentForm({
         });
 	});
     
-    $("#donateCharity").change(setTwoNumberDecimal);
-    $("#donateOrg").change(setTwoNumberDecimal);
+    //$("#donateCharity").change(setTwoNumberDecimal);
+    //$("#donateOrg").change(setTwoNumberDecimal);
 
 	$(".deleteAttendee").click(function(e) {
 		var id = this.id.split('_')[1];
@@ -501,8 +521,13 @@ function doCheckout() {
                 if (result.success) {
 	    			window.location = "{% url 'done' %}";
                 } else {
-                    alert("An error has occurred: " + result.message + " If this error continues, please contact registration@furthemore.org for assistence.");
 			        $("#checkout").removeAttr("disabled");
+                    if (result.message.indexOf("email") > -1) {
+                        alert(result.message);
+                        window.location = "{% url 'done' %}";
+                    } else {
+                        alert("An error has occurred: " + result.message + " If this error continues, please contact registration@furthemore.org for assistence.")
+                    }
                 }
             }
 		});

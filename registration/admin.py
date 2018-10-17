@@ -24,10 +24,29 @@ admin.site.register(ShirtSizes)
 admin.site.register(Event)
 admin.site.register(TableSize)
 
+class FirebaseAdmin(admin.ModelAdmin):
+    list_display = ('name', 'token', 'closed')
+
+admin.site.register(Firebase, FirebaseAdmin)
+
 class BanListAdmin(admin.ModelAdmin):
     list_display = ('firstName', 'lastName', 'email')
 
 admin.site.register(BanList, BanListAdmin)
+
+def send_staff_token_email(modeladmin, request, queryset):
+    for token in queryset:
+        sendNewStaffEmail(token)
+        token.sent = True
+        token.save()
+send_staff_token_email.short_description = "Send New Staff registration email"
+
+class TempTokenAdmin(admin.ModelAdmin):
+    actions = [send_staff_token_email]
+    list_display = ['email', 'token', 'sent', 'used']
+
+admin.site.register(TempToken, TempTokenAdmin)
+
 
 def send_approval_email(modeladmin, request, queryset):
     sendApprovalEmail(queryset)
@@ -38,7 +57,7 @@ def send_payment_email(modeladmin, request, queryset):
     for dealer in queryset:
         badge = dealer.getBadge()
         oi = OrderItem.objects.filter(badge=badge).first()
-        if oi and oi.order: 
+        if oi and oi.order:
             sendDealerPaymentEmail(dealer,oi.order)
 send_payment_email.short_description = "Resend payment confirmation email"
 
@@ -48,17 +67,29 @@ def send_assistant_form_email(modeladmin, request, queryset):
 send_assistant_form_email.short_description = "Send assistent addition form email"
 
 
+class DealerAsstInline(NestedTabularInline):
+    model=DealerAsst
+    extra=0
+
+class DealerAsstAdmin(admin.ModelAdmin):
+    save_on_top = True
+    list_display = ('name', 'email', 'license', 'event' )
+    list_filter = ('event',)
+    search_fields = ['name', 'email']
+
+admin.site.register(DealerAsst, DealerAsstAdmin)
+
 class DealerResource(resources.ModelResource):
     class Meta:
         model = Dealer
-        fields = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1', 
+        fields = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1',
                   'attendee__address2', 'attendee__city', 'attendee__state', 'attendee__country',
                   'attendee__postalCode', 'attendee__phone', 'attendee__email',
                   'businessName', 'approved', 'website', 'description', 'license', 'needPower', 'needWifi',
                   'wallSpace', 'nearTo', 'farFrom', 'tableSize__name', 'reception', 'artShow',
                   'charityRaffle', 'breakfast', 'asstBreakfast', 'willSwitch', 'partners', 'buttonOffer', 'discount',
                   'discountReason', 'emailed')
-        export_order = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1', 
+        export_order = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1',
                   'attendee__address2', 'attendee__city', 'attendee__state', 'attendee__country',
                   'attendee__postalCode', 'attendee__phone', 'attendee__email',
                   'businessName', 'approved', 'website', 'description', 'license', 'needPower', 'needWifi',
@@ -66,16 +97,18 @@ class DealerResource(resources.ModelResource):
                   'charityRaffle', 'breakfast', 'asstBreakfast', 'willSwitch', 'partners', 'buttonOffer', 'discount',
                   'discountReason', 'emailed')
 
-class DealerAdmin(ImportExportModelAdmin):
+
+class DealerAdmin(NestedModelAdmin, ImportExportModelAdmin):
     list_display = ('attendee', 'businessName', 'tableSize', 'chairs', 'tables', 'needWifi', 'approved', 'tableNumber', 'emailed', 'paidTotal', 'event')
     list_filter = ('event',)
     save_on_top = True
+    inlines = [DealerAsstInline]
     resource_class = DealerResource
     actions = [send_approval_email, send_assistant_form_email, send_payment_email]
-    readonly_fields = ['get_email']
+    readonly_fields = ['get_email', ]
     fieldsets = (
         (
-	    None, 
+	    None,
             {'fields':(
                 ('attendee', 'approved'),
                 'get_email',
@@ -84,37 +117,43 @@ class DealerAdmin(ImportExportModelAdmin):
             )}
         ),
         (
-            'Business Info', 
+            'Business Info',
             {'fields': (
-                'businessName', 'license', 'website', 'description'
+                'businessName', 'license', 'website', 'logo', 'description'
             )}
         ),
         (
-            'Table Request', 
+            'Table Request',
             {'fields':(
-                'tableSize', 
+                'tableSize',
                 ('willSwitch', 'needPower', 'needWifi', 'wallSpace', 'reception', 'breakfast'),
                 ('nearTo', 'farFrom'),
-                ('tables', 'chairs'), 'asstBreakfast', 'partners'
+                ('tables', 'chairs'), 'asstBreakfast'
             )}
         ),
         (
-            'Contributions', 
+            'Contributions',
             {'fields':(
                 'artShow', 'buttonOffer', 'charityRaffle'
             )}
         )
     )
-    
+
     def get_email(self, obj):
         return obj.attendee.email
     get_email.short_description = "Attendee Email"
 
-
 admin.site.register(Dealer, DealerAdmin)
+
 
 ########################################################
 #   Staff Admin
+
+def checkin_staff(modeladmin, request, queryset):
+   for staff in queryset:
+       staff.checkedIn = True
+       staff.save()
+checkin_staff.short_description = "Check in staff"
 
 def send_staff_registration_email(modeladmin, request, queryset):
     for staff in queryset:
@@ -124,49 +163,50 @@ send_staff_registration_email.short_description = "Send registration instruction
 class StaffResource(resources.ModelResource):
     class Meta:
         model = Staff
-        fields = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1', 
+        fields = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1',
                   'attendee__address2', 'attendee__city', 'attendee__state', 'attendee__country',
                   'attendee__postalCode', 'attendee__phone', 'attendee__email',
-                  'department__name', 'supervisor', 'title', 'twitter', 'telegram', 'shirtsize__name', 
-                  'specialSkills', 'specialFood', 'specialMedical', 'contactName', 'contactPhone', 
+                  'department__name', 'supervisor', 'title', 'twitter', 'telegram', 'shirtsize__name',
+                  'specialSkills', 'specialFood', 'specialMedical', 'contactName', 'contactPhone',
                   'contactRelation'
                   )
-        export_order = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1', 
+        export_order = ('id', 'event__name', 'attendee__firstName', 'attendee__lastName', 'attendee__address1',
                   'attendee__address2', 'attendee__city', 'attendee__state', 'attendee__country',
                   'attendee__postalCode', 'attendee__phone', 'attendee__email',
-                  'department__name', 'supervisor', 'title', 'twitter', 'telegram', 'shirtsize__name', 
-                  'specialSkills', 'specialFood', 'specialMedical', 'contactName', 'contactPhone', 
+                  'department__name', 'supervisor', 'title', 'twitter', 'telegram', 'shirtsize__name',
+                  'specialSkills', 'specialFood', 'specialMedical', 'contactName', 'contactPhone',
                   'contactRelation'
                   )
 
 class StaffAdmin(ImportExportModelAdmin):
     save_on_top = True
-    actions = [send_staff_registration_email, 'copy_to_event']
-    list_display = ('attendee', 'get_badge', 'get_email', 'title', 'department', 'shirtsize', 'staff_total', 'event')
+    actions = [send_staff_registration_email, checkin_staff, 'copy_to_event']
+    list_display = ('attendee', 'get_badge', 'get_email', 'title', 'department', 'shirtsize', 'staff_total', 'checkedIn', 'event')
     list_filter = ('event','department')
-    search_fields = ['attendee__email', 'attendee__lastName', 'attendee__firstName'] 
+    search_fields = ['attendee__email', 'attendee__lastName', 'attendee__firstName']
     resource_class = StaffResource
-    readonly_fields = ['get_email', 'get_badge']
+    readonly_fields = ['get_email', 'get_badge', 'get_badge_id']
     fieldsets = (
         (
-	    None, 
+	    None,
             {'fields':(
-                ('attendee', 'registrationToken'), 
-                ('event', 'get_email', 'get_badge'),
+                ('attendee', 'registrationToken'),
+                ('event', 'get_email'), 
+                ('get_badge', 'get_badge_id'),
                 ('title', 'timesheetAccess'),
                 ('department', 'supervisor'),
                 ('twitter','telegram'),
-                'shirtsize', 
+                ('shirtsize', 'checkedIn'),
             )}
         ),
         (
-            'Emergency Contact', 
+            'Emergency Contact',
             {'fields': (
                 'contactName', 'contactPhone', 'contactRelation'
             )}
         ),
         (
-            'Misc', 
+            'Misc',
             {'fields': (
                 'specialSkills', 'specialFood', 'specialMedical',
                 'notes'
@@ -180,10 +220,17 @@ class StaffAdmin(ImportExportModelAdmin):
 
     def get_badge(self, obj):
         badge = Badge.objects.filter(attendee=obj.attendee, event=obj.event).last()
-        if badge == None: 
+        if badge == None:
             return "--"
         return badge.badgeName
     get_badge.short_description = "Badge Name"
+
+    def get_badge_id(self, obj):
+        badge = Badge.objects.filter(attendee=obj.attendee, event=obj.event).last()
+        if badge == None:
+            return "--"
+        return badge.badgeNumber
+    get_badge_id.short_description = "Badge Number"
 
     def staff_total(self, obj):
         badge = Badge.objects.filter(attendee=obj.attendee, event=obj.event).last()
@@ -242,25 +289,25 @@ def assign_badge_numbers(modeladmin, request, queryset):
     firstBadge = queryset[0]
     badges = Badge.objects.filter(attendee__in=nonstaff, event=firstBadge.event)
     highest = badges.aggregate(Max('badgeNumber'))['badgeNumber__max']
-    for badge in queryset.order_by('registeredDate'): 
+    for badge in queryset.order_by('registeredDate'):
         if badge.badgeNumber: continue
         if badge.effectiveLevel() == None: continue
         highest = highest + 1
-        badge.badgeNumber = highest 
+        badge.badgeNumber = highest
         badge.save()
 assign_badge_numbers.short_description = "Assign badge number"
-    
+
 def assign_numbers_and_print(modeladmin, request, queryset):
     nonstaff = Attendee.objects.filter(staff=None)
     firstBadge = queryset[0]
     badges = Badge.objects.filter(attendee__in=nonstaff, event=firstBadge.event)
     highest = badges.aggregate(Max('badgeNumber'))['badgeNumber__max']
 
-    for badge in queryset.order_by('registeredDate'): 
+    for badge in queryset.order_by('registeredDate'):
         if badge.badgeNumber: continue
         if badge.effectiveLevel() == None: continue
         highest = highest + 1
-        badge.badgeNumber = highest 
+        badge.badgeNumber = highest
         badge.save()
 
     con = printing.Main(local=True)
@@ -271,7 +318,7 @@ def assign_numbers_and_print(modeladmin, request, queryset):
             badgeNumber = ''
         else:
             badgeNumber = '{:04}'.format(badge.badgeNumber)
-        tags.append({ 
+        tags.append({
             'name'   : badge.badgeName,
             'number' : badgeNumber,
             'level'  : str(badge.effectiveLevel()),
@@ -302,7 +349,7 @@ def print_badges(modeladmin, request, queryset):
             badgeNumber = ''
         else:
             badgeNumber = '{:04}'.format(badge.badgeNumber)
-        tags.append({ 
+        tags.append({
             'name'   : badge.badgeName,
             'number' : badgeNumber,
             'level'  : str(badge.effectiveLevel()),
@@ -331,7 +378,7 @@ def print_dealerasst_badges(modeladmin, request, queryset):
             badgeNumber = ''
         else:
             badgeNumber = 'S{:03}'.format(badge.badgeNumber)
-        tags.append({ 
+        tags.append({
             'name'   : badge.badgeName,
             'number' : '',
             'level'  : '',
@@ -360,9 +407,9 @@ def print_dealer_badges(modeladmin, request, queryset):
         if badge.badgeNumber is None:
             badgeNumber = ''
         else:
-            badgeNumber = 'S{:03}'.format(att.badgeNumber)
-        tags.append({ 
-            'name'   : att.badgeName,
+            badgeNumber = 'S{:03}'.format(badge.badgeNumber)
+        tags.append({
+            'name'   : badge.badgeName,
             'number' : '',
             'level'  : '',
             'title'  : ''
@@ -386,11 +433,11 @@ def assign_staff_badge_numbers(modeladmin, request, queryset):
     event = staff[0].event
     badges = Badge.objects.filter(attendee__in=staff,event=event)
     highest = badges.aggregate(Max('badgeNumber'))['badgeNumber__max']
-    for badge in queryset.order_by('registeredDate'): 
+    for badge in queryset.order_by('registeredDate'):
         if badge.badgeNumber: continue
         if badge.effectiveLevel() == None: continue
         highest = highest + 1
-        badge.badgeNumber = highest 
+        badge.badgeNumber = highest
         badge.save()
 assign_staff_badge_numbers.short_description = "Assign staff badge numbers"
 
@@ -403,8 +450,8 @@ def print_staff_badges(modeladmin, request, queryset):
             badgeNumber = ''
         else:
             badgeNumber = 'S{:03}'.format(badge.badgeNumber)
-        staff = badge.attendee.staff
-        tags.append({ 
+        staff = Staff.objects.get(attendee=badge.attendee,event=badge.event)
+        tags.append({
             'name'   : badge.badgeName,
             'number' : badgeNumber,
             'level'  : staff.title,
@@ -458,11 +505,11 @@ class BadgeResource(resources.ModelResource):
 
     class Meta:
         model = Badge
-        fields = ('id', 'event__name', 'badge_level', 'attendee__firstName', 'attendee__lastName', 'attendee__address1', 
+        fields = ('id', 'event__name', 'badge_level', 'attendee__firstName', 'attendee__lastName', 'attendee__address1',
                   'attendee__address2', 'attendee__city', 'attendee__state', 'attendee__country',
                   'attendee__postalCode', 'attendee__phone', 'attendee__email', 'badgeName', 'badgeNumber', 'attendee__aslRequest'
                   )
-        export_order = ('id', 'event__name', 'badge_level', 'attendee__firstName', 'attendee__lastName', 'attendee__address1', 
+        export_order = ('id', 'event__name', 'badge_level', 'attendee__firstName', 'attendee__lastName', 'attendee__address1',
                   'attendee__address2', 'attendee__city', 'attendee__state', 'attendee__country',
                   'attendee__postalCode', 'attendee__phone', 'attendee__email', 'badgeName', 'badgeNumber', 'attendee__aslRequest'
                   )
@@ -472,29 +519,33 @@ class BadgeAdmin(NestedModelAdmin, ImportExportModelAdmin):
     resource_class = BadgeResource
     save_on_top = True
     list_filter = ('event', 'printed')
-    list_display = ('attendee', 'badgeName', 'badgeNumber', 'printed', 'paidTotal', 'effectiveLevel', 'abandoned', 'get_age_range')
-    search_fields = ['attendee__email', 'attendee__lastName', 'attendee__firstName', 'badgeName', 'badgeNumber'] 
+    list_display = ('attendee', 'badgeName', 'badgeNumber', 'printed', 'paidTotal', 'effectiveLevel', 'abandoned',
+                    'get_age_range', 'registeredDate')
+    search_fields = ['attendee__email', 'attendee__lastName', 'attendee__firstName', 'badgeName', 'badgeNumber']
     readonly_fields = ['get_age_range', ]
-    actions = [assign_badge_numbers, print_badges, print_dealerasst_badges, assign_numbers_and_print, 
+    actions = [assign_badge_numbers, print_badges, print_dealerasst_badges, assign_numbers_and_print,
                print_dealer_badges, assign_staff_badge_numbers, print_staff_badges]
     fieldsets = (
         (
-	    None, 
+	    None,
             {'fields':(
                 'printed',
                 ('badgeName', 'badgeNumber', 'get_age_range'),
-                ('registeredDate', 'event'), 
-                'attendee', 
+                ('registeredDate', 'event'),
+                'attendee',
             )}
         ),
     )
 
     def get_age_range(self, obj):
-        born = obj.attendee.birthdate
-        today = date.today()
-        age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-        if age >= 18: return format_html('<span>18+</span>')
-        return format_html('<span style="color:red">MINOR FORM<br/>REQUIRED</span>')
+        try:
+            born = obj.attendee.birthdate
+            today = date.today()
+            age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+            if age >= 18: return format_html('<span>18+</span>')
+            return format_html('<span style="color:red">MINOR FORM<br/>REQUIRED</span>')
+        except:
+            return 'Invalid DOB'
     get_age_range.short_description = "Age Group"
 
 admin.site.register(Badge, BadgeAdmin)
@@ -503,13 +554,13 @@ class AttendeeAdmin(NestedModelAdmin):
     inlines = [BadgeInline]
     save_on_top = True
     actions = [make_staff]
-    search_fields = ['email', 'lastName', 'firstName'] 
+    search_fields = ['email', 'lastName', 'firstName']
     list_display = ('firstName', 'lastName',  'email', 'get_age_range')
     fieldsets = (
         (
-	    None, 
+	    None,
             {'fields':(
-                ('firstName', 'lastName'), 
+                ('firstName', 'lastName'),
                 ('address1', 'address2'),
                 ('city', 'state', 'postalCode', 'country'),
                 ('email','phone', 'emailsOk', 'surveyOk'),
@@ -517,15 +568,15 @@ class AttendeeAdmin(NestedModelAdmin):
             )}
         ),
         (
-            'Other Con Info', 
+            'Other Con Info',
             {'fields': (
                 'aslRequest', 'volunteerDepts', 'holdType', 'notes'
             )}
         ),
         (
-            'Parent Info', 
+            'Parent Info',
             {'fields': (
-                'parentFirstName', 'parentLastName', 
+                'parentFirstName', 'parentLastName',
                 'parentPhone', 'parentEmail',
             )}
         ),
@@ -552,23 +603,23 @@ class OrderAdmin(NestedModelAdmin):
     inlines = [OrderItemInline]
     fieldsets = (
         (
-	    None, 
+	    None,
             {'fields':(
-                ('total', 'billingType'), 
-                ('reference', 'status'), 
-                ('discount', 'lastFour'), 
+                ('total', 'billingType'),
+                ('reference', 'status'),
+                ('discount', 'lastFour'),
                 ('orgDonation', 'charityDonation')
             )}
         ),
         (
-            'Billing Address', 
+            'Billing Address',
             {'fields': (
                 'billingName', 'billingEmail', 'billingAddress1', 'billingAddress2',
                 'billingCity', 'billingState', 'billingPostal'
             ), 'classes': ('collapse',)}
         ),
         (
-            'Notes', 
+            'Notes',
             {'fields': (
                 'notes',
             ), 'classes': ('collapse',)}
@@ -584,7 +635,7 @@ class PriceLevelAdmin(admin.ModelAdmin):
 admin.site.register(PriceLevel, PriceLevelAdmin)
 
 class PriceLevelOptionAdmin(admin.ModelAdmin):
-    list_display = ('optionName', 'optionPrice', 'optionExtraType', 'required', 'active')
+    list_display = ('optionName', 'rank', 'optionPrice', 'optionExtraType', 'required', 'active')
 
 admin.site.register(PriceLevelOption, PriceLevelOptionAdmin)
 

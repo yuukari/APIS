@@ -1,4 +1,5 @@
 from django.conf.urls import url
+from django.contrib.auth import views as auth_views
 
 from . import views
 
@@ -6,6 +7,8 @@ app_name = 'registration'
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
+
+    url(r'^logout/$', auth_views.logout, name='logout'),
 
     url(r'^upgrade/lookup/?$', views.findUpgrade, name='findUpgrade'),
     url(r'^upgrade/info/?$', views.infoUpgrade, name='infoUpgrade'),
@@ -15,13 +18,17 @@ urlpatterns = [
     url(r'^upgrade/done/?$', views.doneUpgrade, name='doneUpgrade'),
     url(r'^upgrade/(?P<guid>\w+)/?$', views.upgrade, name='upgrade'),
 
-    url(r'^staff/done/?$', views.staffDone, name='staff'),
+    url(r'^staff/done/?$', views.staffDone, name='doneStaff'),
     url(r'^staff/lookup/?$', views.findStaff, name='findStaff'),
-    url(r'^staff/add/?$', views.addStaff, name='addStaff'),
     url(r'^staff/info/?$', views.infoStaff, name='infoStaff'),
-    url(r'^staff/invoice/?$', views.invoiceStaff, name='invoiceStaff'),
-    url(r'^staff/checkout/?$', views.checkoutStaff, name='checkoutStaff'),
+    url(r'^staff/add/?$', views.addStaff, name='addStaff'),
     url(r'^staff/(?P<guid>\w+)/?$', views.staff, name='staff'),
+
+    url(r'^newstaff/done/?$', views.staffDone, name='doneNewStaff'),
+    url(r'^newstaff/lookup/?$', views.findNewStaff, name='findNewStaff'),
+    url(r'^newstaff/info/?$', views.infoNewStaff, name='infoNewStaff'),
+    url(r'^newstaff/add/?$', views.addNewStaff, name='addNewStaff'),
+    url(r'^newstaff/(?P<guid>\w+)/?$', views.newStaff, name='newstaff'),    
 
     url(r'^dealer/?$', views.newDealer, name='newDealer'),
     url(r'^dealer/addNew/?$', views.addNewDealer, name='addNewDealer'),
@@ -44,7 +51,21 @@ urlpatterns = [
     url(r'^onsite/?$', views.onsite, name='onsite'),
     url(r'^onsite/cart/?$', views.onsiteCart, name='onsiteCart'),
     url(r'^onsite/done/?$', views.onsiteDone, name='onsiteDone'),
-    
+    url(r'^onsite/register/?$', views.onsiteAdmin, name='onsiteAdmin'),
+    url(r'^onsite/register/search/?$', views.onsiteAdminSearch, name='onsiteAdminSearch'),
+    url(r'^onsite/register/cart/?$', views.onsiteAdminCart, name='onsiteAdminCart'),
+    url(r'^onsite/register/cart/add/?$', views.onsiteAddToCart, name='onsiteAddToCart'),
+    url(r'^onsite/register/cart/remove/?$', views.onsiteRemoveFromCart, name='onsiteRemoveFromCart'),
+    url(r'^onsite/register/open/?$', views.openTerminal, name='openTerminal'),
+    url(r'^onsite/register/close/?$', views.closeTerminal, name='closeTerminal'),
+    url(r'^onsite/register/payment/?$', views.enablePayment, name='enablePayment'),
+    url(r'^onsite/register/clear/?$', views.onsiteAdminClearCart, name='onsiteAdminClearCart'),
+    url(r'^onsite/register/badge/assign/?$', views.assignBadgeNumber, name='assignBadgeNumber'),
+    url(r'^onsite/register/badge/print/?$', views.onsitePrintBadges, name='onsitePrintBadges'),
+    url(r'^onsite/square/complete/?$', views.completeSquareTransaction, name='completeSquareTransaction'),
+
+    url(r'^onsite/signature/?$', views.onsiteSignature, name='onsiteSignature'),
+
     url(r'^cart/?$', views.getCart, name='cart'),
     url(r'^cart/add/?$', views.addToCart, name='addToCart'),
     url(r'^cart/remove/?$', views.removeFromCart, name='removeFromCart'),
@@ -57,6 +78,7 @@ urlpatterns = [
     url(r'^departments/?$', views.getDepartments, name='departments'),
     url(r'^alldepartments/?$', views.getAllDepartments, name='alldepartments'),
     url(r'^pricelevels/?$', views.getPriceLevels, name='pricelevels'),
+    url(r'^adultpricelevels/?$', views.getAdultPriceLevels, name='adultpricelevels'),
     url(r'^minorpricelevels/?$', views.getMinorPriceLevels, name='minorpricelevels'),
     url(r'^accompaniedpricelevels/?$', views.getAccompaniedPriceLevels, name='accompaniedpricelevels'),
     url(r'^freepricelevels/?$', views.getFreePriceLevels, name='freepricelevels'),
@@ -65,10 +87,14 @@ urlpatterns = [
     url(r'^addresses/?$', views.getSessionAddresses, name='addresses'),
 
     url(r'^utility/badges?$', views.basicBadges, name='basicBadges'),
-    url(r'^utility/holiday?$', views.holidayBadges, name='holidayBadges'),
+    url(r'^utility/vips?$', views.vipBadges, name='vipBadges'),
 
     url(r'^flush/?$', views.flush, name='flush'),
 
     url(r'^pdf/?$', views.servePDF, name='pdf'),
     url(r'^print/?$', views.printNametag, name='print'),
+
+    url(r'^firebase/register/?', views.firebaseRegister, name='firebaseRegister'),
+    url(r'^firebase/lookup/?', views.firebaseLookup, name='firebaseLookup'),
+
 ]

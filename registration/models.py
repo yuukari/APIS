@@ -7,11 +7,6 @@ from django.db import models
 from django.utils import timezone
 from django.db.models import Q
 
-#######################################
-# As of Data Model version 27
-#######################################
-
-
 # Lookup and supporting tables.
 class LookupTable(models.Model):
     name = models.CharField(max_length=200)
@@ -28,6 +23,69 @@ class HoldType(LookupTable):
 class ShirtSizes(LookupTable):
     pass
 
+class Discount(models.Model):
+    codeName = models.CharField(max_length=100)
+    percentOff = models.IntegerField(null=True)
+    amountOff = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    startDate = models.DateTimeField()
+    endDate = models.DateTimeField()
+    notes = models.TextField(blank=True)
+    oneTime = models.BooleanField(default=False)
+    used = models.IntegerField(default=0)
+    reason = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+      return self.codeName
+
+    def isValid(self):
+        now = timezone.now()
+        if self.startDate > now or self.endDate < now:
+            return False
+        if self.oneTime and self.used > 0:
+            return False
+        return True
+
+class PriceLevelOption(models.Model):
+    optionName = models.CharField(max_length=200)
+    optionPrice = models.DecimalField(max_digits=6, decimal_places=2)
+    optionExtraType = models.CharField(max_length=100, blank=True)
+    optionExtraType2 = models.CharField(max_length=100, blank=True)
+    optionExtraType3 = models.CharField(max_length=100, blank=True)
+    required = models.BooleanField(default=False)
+    active = models.BooleanField(default=False)
+    rank = models.IntegerField(default=0)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return '{0} (${1})'.format(self.optionName, self.optionPrice)
+
+    def getList(self):
+        if self.optionExtraType in ["int", "bool", "string"]:
+            return []
+        elif self.optionExtraType == "ShirtSizes":
+            return [{'name':s.name, 'id':s.id} for s in ShirtSizes.objects.all()]
+        else:
+            return []
+
+class PriceLevel(models.Model):
+    name = models.CharField(max_length=100)
+    priceLevelOptions = models.ManyToManyField(PriceLevelOption, blank=True)
+    description = models.TextField()
+    basePrice = models.DecimalField(max_digits=6, decimal_places=2)
+    startDate = models.DateTimeField()
+    endDate = models.DateTimeField()
+    public = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    group = models.TextField(blank=True)
+    emailVIP = models.BooleanField(default=False)
+    emailVIPEmails = models.CharField(max_length=400, blank=True, default='')
+    isMinor = models.BooleanField(default=False)
+
+    def __str__(self):
+      return self.name
+
+
+
 class Event(LookupTable):
     dealerRegStart = models.DateTimeField()
     dealerRegEnd = models.DateTimeField()
@@ -39,6 +97,11 @@ class Event(LookupTable):
     onlineRegEnd = models.DateTimeField()
     eventStart = models.DateField()
     eventEnd = models.DateField()
+    default = models.BooleanField(default=False)
+    newStaffDiscount = models.ForeignKey(Discount, null=True, blank=True, on_delete=models.SET_NULL, related_name='newStaffEvent')
+    staffDiscount = models.ForeignKey(Discount, null=True, blank=True, on_delete=models.SET_NULL, related_name="staffEvent")
+    dealerDiscount = models.ForeignKey(Discount, null=True, blank=True, on_delete=models.SET_NULL, related_name="dealerEvent")
+    allowOnlineMinorReg = models.BooleanField(default=False)
 
 class TableSize(LookupTable):
     description = models.TextField()
@@ -96,6 +159,14 @@ class Department(models.Model):
 def getRegistrationToken():
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase+string.digits) for _ in range(15))
 
+class TempToken(models.Model):
+    token = models.CharField(max_length=200, default=getRegistrationToken)
+    email = models.CharField(max_length=200)
+    validUntil = models.DateTimeField()
+    used = models.BooleanField(default=False)
+    usedDate = models.DateTimeField(null=True, blank=True)
+    sent = models.BooleanField(default=False)
+
 class Attendee(models.Model):
     firstName = models.CharField(max_length=200)
     lastName = models.CharField(max_length=200)
@@ -124,8 +195,12 @@ class Attendee(models.Model):
     def __str__(self):
       if self is None:
           return "--"
-      return '%s %s' % (self.firstName, self.lastName)
-
+      try:
+        test1 = self.firstName.decode('ascii')
+        test2 = self.lastName.decode('ascii')
+        return '%s %s' % (self.firstName, self.lastName)
+      except:
+        return '--attendee--'
 
 class Badge(models.Model):
     attendee = models.ForeignKey(Attendee, null=True, blank=True, on_delete=models.SET_NULL)
@@ -145,6 +220,14 @@ class Badge(models.Model):
             return "[Orphan {0}]".format(self.registeredDate)
         return "Badge object {0}".format(self.registrationToken)
 
+    def isMinor(self):
+      birthdate = self.attendee.birthdate
+      eventdate = self.event.eventStart
+      age_at_event = eventdate.year - birthdate.year - ((eventdate.month, eventdate.day) < (birthdate.month, birthdate.day))
+      if age_at_event < 18: 
+        return True
+      return False
+
     def getDiscount(self):
       discount = ""
       orderItems = OrderItem.objects.filter(badge=self, order__isnull=False)
@@ -157,9 +240,11 @@ class Badge(models.Model):
       total = 0
       orderItems = OrderItem.objects.filter(badge=self, order__isnull=False)
       for oi in orderItems:
-          total += oi.order.total
+          if oi.order.billingType != Order.UNPAID:
+              total += oi.order.total
       return Decimal(total)
 
+    @property
     def abandoned(self):
         if Staff.objects.filter(attendee=self.attendee).exists():
             return 'Staff'
@@ -167,7 +252,10 @@ class Badge(models.Model):
             return 'Dealer'
         if self.paidTotal() > 0:
             return 'Paid'
-        if self.effectiveLevel():
+        level = self.effectiveLevel()
+        if level == 'Unpaid':
+            return 'Unpaid'
+        if level:
             return 'Comp'
         return 'Abandoned'
 
@@ -175,10 +263,17 @@ class Badge(models.Model):
         level = None
         orderItems = OrderItem.objects.filter(badge=self, order__isnull=False)
         for oi in orderItems:
-            if not level: level = oi.priceLevel
+            if oi.order.billingType == Order.UNPAID:
+                return 'Unpaid'
+            if not level:
+                level = oi.priceLevel
             elif oi.priceLevel.basePrice > level.basePrice:
                 level = oi.priceLevel
         return level
+
+    def getOrderItems(self):
+        orderItems = OrderItem.objects.filter(badge=self, order__isnull=False)
+        return orderItems
 
     def save(self, *args, **kwargs):
       if not self.id and not self.registeredDate:
@@ -207,6 +302,7 @@ class Staff(models.Model):
     needRoom = models.BooleanField(default=False)
     gender = models.CharField(max_length=50, blank=True)
     event = models.ForeignKey(Event, null=True, blank=True, on_delete=models.SET_NULL)
+    checkedIn = models.BooleanField(default=False)
 
     def __str__(self):
       return '%s %s' % (self.attendee.firstName, self.attendee.lastName)
@@ -214,6 +310,11 @@ class Staff(models.Model):
     def getBadge(self):
         badge = Badge.objects.filter(attendee=self.attendee,event=self.event).last()
         return badge
+
+    def resetToken(self):
+        self.registrationToken = getRegistrationToken()
+        self.save()
+        return
 
 
 class Dealer(models.Model):
@@ -247,17 +348,14 @@ class Dealer(models.Model):
     emailed = models.BooleanField(default=False)
     asstBreakfast = models.BooleanField(default=False)
     event = models.ForeignKey(Event, null=True, blank=True, on_delete=models.SET_NULL)
+    logo = models.CharField(max_length=500, blank=True)
 
     def __str__(self):
       return '%s %s' % (self.attendee.firstName, self.attendee.lastName)
 
     def getPartnerCount(self):
-      partners = self.partners.split(', ')
-      partnerCount = 0
-      for part in partners:
-        if part.find("name") > -1 and part.split(':')[1].strip() != "":
-            partnerCount = partnerCount + 1
-      return partnerCount
+      partnercount = self.dealerasst_set.count()
+      return partnercount
 
     def paidTotal(self):
           total = 0
@@ -272,77 +370,40 @@ class Dealer(models.Model):
         badge = Badge.objects.filter(attendee=self.attendee,event=self.event).last()
         return badge
 
-# Start order tables
+    def resetToken(self):
+        self.registrationToken = getRegistrationToken()
+        self.save()
+        return
 
-class PriceLevelOption(models.Model):
-    optionName = models.CharField(max_length=200)
-    optionPrice = models.DecimalField(max_digits=6, decimal_places=2)
-    optionExtraType = models.CharField(max_length=100, blank=True)
-    optionExtraType2 = models.CharField(max_length=100, blank=True)
-    optionExtraType3 = models.CharField(max_length=100, blank=True)
-    required = models.BooleanField(default=False)
-    active = models.BooleanField(default=False)
 
-    def __str__(self):
-      return '%s' % (self.optionName)
-
-    def getList(self):
-        if self.optionExtraType in ["int", "bool", "string"]:
-            return []
-        elif self.optionExtraType == "ShirtSizes":
-            return [{'name':s.name, 'id':s.id} for s in ShirtSizes.objects.all()]
-        else:
-            return []
-
-class PriceLevel(models.Model):
-    name = models.CharField(max_length=100)
-    priceLevelOptions = models.ManyToManyField(PriceLevelOption)
-    description = models.TextField()
-    basePrice = models.DecimalField(max_digits=6, decimal_places=2)
-    startDate = models.DateTimeField()
-    endDate = models.DateTimeField()
-    public = models.BooleanField(default=False)
-    notes = models.TextField(blank=True)
-    group = models.TextField(blank=True)
-    emailVIP = models.BooleanField(default=False)
-    emailVIPEmails = models.CharField(max_length=400, blank=True, default='')
+class DealerAsst(models.Model):
+    dealer = models.ForeignKey(Dealer)
+    attendee = models.ForeignKey(Attendee, null=True, blank=True, on_delete=models.SET_NULL)
+    registrationToken = models.CharField(max_length=200, default=getRegistrationToken)
+    name = models.CharField(max_length=400)
+    email = models.CharField(max_length=200)
+    license = models.CharField(max_length=50)
+    sent = models.BooleanField(default=False)
+    event = models.ForeignKey(Event, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
       return self.name
 
-class Discount(models.Model):
-    codeName = models.CharField(max_length=100)
-    percentOff = models.IntegerField(null=True)
-    amountOff = models.DecimalField(max_digits=6, decimal_places=2, null=True)
-    startDate = models.DateTimeField()
-    endDate = models.DateTimeField()
-    notes = models.TextField(blank=True)
-    oneTime = models.BooleanField(default=False)
-    used = models.IntegerField(default=0)
-    reason = models.CharField(max_length=100, blank=True)
 
-    def __str__(self):
-      return self.codeName
-
-    def isValid(self):
-        now = timezone.now()
-        if self.startDate > now or self.endDate < now:
-            return False
-        if self.oneTime and self.used > 0:
-            return False
-        return True
+# Start order tables
 
 class Order(models.Model):
+    UNPAID = 'Unpaid'
     CREDIT = 'Credit'
     CASH = 'Cash'
     COMP = 'Comp'
-    BILLING_TYPE_CHOICES = ((CREDIT, 'Credit'), (CASH, 'Cash'), (COMP, 'Comp'))
+    BILLING_TYPE_CHOICES = ((UNPAID, 'Unpaid'), (CREDIT, 'Credit'), (CASH, 'Cash'), (COMP, 'Comp'))
     total = models.DecimalField(max_digits=8, decimal_places=2)
     status = models.CharField(max_length=50, default='Pending')
     reference = models.CharField(max_length=50)
     createdDate = models.DateTimeField(auto_now_add=True, null=True)
     settledDate = models.DateTimeField(auto_now_add=True, null=True)
-    discount = models.ForeignKey(Discount, null=True, on_delete=models.SET_NULL)
+    discount = models.ForeignKey(Discount, null=True, on_delete=models.SET_NULL, blank=True)
     orgDonation = models.DecimalField(max_digits=8, decimal_places=2, null=True, default=0)
     charityDonation = models.DecimalField(max_digits=8, decimal_places=2, null=True, default=0)
     notes = models.TextField(blank=True)
@@ -372,7 +433,7 @@ class OrderItem(models.Model):
     enteredDate = models.DateTimeField(auto_now_add=True, null=True)
 
     def getOptions(self):
-      return list(AttendeeOptions.objects.filter(orderItem=self))
+      return list(AttendeeOptions.objects.filter(orderItem=self).order_by('option__optionName'))
 
     def __str__(self):
         try:
@@ -411,3 +472,17 @@ class BanList(models.Model):
     firstName = models.CharField(max_length=200, blank=True)
     lastName = models.CharField(max_length=200, blank=True)
     email = models.CharField(max_length=400, blank=True)
+
+class Firebase(models.Model):
+    token = models.CharField(max_length=500)
+    name = models.CharField(max_length=100)
+    closed = models.BooleanField(default=False)
+    cashdrawer = models.BooleanField(default=False)
+
+class Cashdrawer(models.Model):
+    timestamp = models.DateField(auto_now_add=True)
+    # Action: one of - ['OPEN', 'CLOSE', 'TXN', 'DEPOSIT']
+    action = models.CharField(max_length=20)
+    total = models.DecimalField(max_digits=8, decimal_places=2)
+    tendered = models.DecimalField(max_digits=8, decimal_places=2, blank=True)
+    user = models.CharField(max_length=200, blank=True)
